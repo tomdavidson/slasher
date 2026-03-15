@@ -1,0 +1,48 @@
+# Build artifacts
+/target/
+/slash-parser-js/pkg/
+/slash-parser-js/dist/
+/slash-parser-js/node_modules/
+
+# Moon cache
+/.moon/cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Fuzz corpus artifacts (keep corpus seeds in VCS)
+/fuzz/artifacts/
+/fuzz/hfuzz_*
+/fuzz/fuzz_*
+
+
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+secrets/
+credentials/
+
+# IDE Settings (keep shared, ignore personal)
+.idea/workspace.xml
+
+# Language-specific ignores (add as needed)
+node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+dist/
+build/
+tmp/
+
+# moon
+.moon/cache/
+.moon/docker/

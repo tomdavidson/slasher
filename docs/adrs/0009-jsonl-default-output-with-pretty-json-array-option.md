@@ -15,7 +15,11 @@ Accepted
 
 ## Context
 
-The parser needs a serialization format for its output that is both machine-readable for downstream tooling and human-inspectable for debugging. The output must represent the full result of a parse run, including metadata, commands with their argument payloads, and interleaved text blocks. Two common JSON-based approaches exist: a single JSON document (easy to pretty-print, harder to stream) and JSONL (one object per line, streamable, harder to read).
+The parser needs a serialization format for its output that is both machine-readable for downstream
+tooling and human-inspectable for debugging. The output must represent the full result of a parse
+run, including metadata, commands with their argument payloads, and interleaved text blocks. Two
+common JSON-based approaches exist: a single JSON document (easy to pretty-print, harder to stream)
+and JSONL (one object per line, streamable, harder to read).
 
 ## Decision
 
@@ -44,7 +48,9 @@ A parser run produces a JSON object with the following top-level structure:
 ```
 
 - `version`: semantic version of the output schema.
-- `context`: metadata about the parse run. Fields `source`, `timestamp`, `user`, and `session_id` are populated from CLI flags (ADR-0007) or defaults. `extra` is a free-form object for additional metadata.
+- `context`: metadata about the parse run. Fields `source`, `timestamp`, `user`, and `session_id`
+  are populated from CLI flags (ADR-0007) or defaults. `extra` is a free-form object for additional
+  metadata.
 - `commands`: ordered array of Command objects.
 - `text_blocks`: ordered array of TextBlock objects.
 
@@ -52,7 +58,7 @@ A parser run produces a JSON object with the following top-level structure:
 
 Each element in `commands` is:
 
-```json
+````json
 {
   "id": "cmd-0",
   "name": "mcp",
@@ -66,13 +72,14 @@ Each element in `commands` is:
   },
   "children": []
 }
-```
+````
 
 - `id`: unique identifier per ADR-0008 (`cmd-0`, `cmd-1`, etc.).
 - `name`: command name without the leading `/`.
 - `raw`: exact source slice for the command (header + all argument lines).
 - `range`: inclusive line range the command covers (`start_line`, `end_line`).
-- `arguments`: argument payload object per ADR-0005 with `header`, `mode`, `fence_lang`, and `payload` fields.
+- `arguments`: argument payload object per ADR-0005 with `header`, `mode`, `fence_lang`, and
+  `payload` fields.
 - `children`: reserved for future hierarchical structures, currently always empty.
 
 ### TextBlock schema
@@ -93,9 +100,14 @@ Each element in `text_blocks` is:
 
 ## Consequences
 
-- JSONL as default enables streaming pipelines where consumers process commands as they are emitted without waiting for the full document.
+- JSONL as default enables streaming pipelines where consumers process commands as they are emitted
+  without waiting for the full document.
 - Pretty JSON mode provides a single-document view for debugging and manual inspection.
-- The envelope schema captures both parse results and run metadata, making output self-describing and reproducible.
-- The `raw` field on commands preserves the original source text for round-trip inspection or error reporting.
-- The `children` field is a forward-compatible extension point that does not affect current consumers.
-- Text blocks between commands are explicitly captured rather than discarded, ensuring no input content is silently lost.
+- The envelope schema captures both parse results and run metadata, making output self-describing
+  and reproducible.
+- The `raw` field on commands preserves the original source text for round-trip inspection or error
+  reporting.
+- The `children` field is a forward-compatible extension point that does not affect current
+  consumers.
+- Text blocks between commands are explicitly captured rather than discarded, ensuring no input
+  content is silently lost.

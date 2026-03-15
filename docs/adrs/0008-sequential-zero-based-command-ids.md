@@ -15,7 +15,11 @@ Accepted
 
 ## Context
 
-The parser output contains multiple commands and text blocks that consumers need to reference, correlate, and process. Each element needs a stable, predictable identifier that conveys its type and position within the document. UUIDs or random IDs would make output non-deterministic and harder to test. Line numbers alone are fragile because they change when content is inserted or removed above.
+The parser output contains multiple commands and text blocks that consumers need to reference,
+correlate, and process. Each element needs a stable, predictable identifier that conveys its type
+and position within the document. UUIDs or random IDs would make output non-deterministic and harder
+to test. Line numbers alone are fragile because they change when content is inserted or removed
+above.
 
 ## Decision
 
@@ -26,7 +30,8 @@ Every command and text block receives a sequential, zero-based identifier with a
 - Commands: `cmd-0`, `cmd-1`, `cmd-2`, etc.
 - Text blocks: `text-0`, `text-1`, `text-2`, etc.
 
-The prefix indicates the element type. The numeric suffix is a zero-based counter that increments independently for each type, in document order.
+The prefix indicates the element type. The numeric suffix is a zero-based counter that increments
+independently for each type, in document order.
 
 ### Assignment rules
 
@@ -41,12 +46,16 @@ In addition to the ID, every command and text block carries a `range` object wit
 - `start_line`: the first line of the element (inclusive).
 - `end_line`: the last line of the element (inclusive).
 
-Line numbers provide a secondary reference for diagnostics and error reporting, complementing the stable ID.
+Line numbers provide a secondary reference for diagnostics and error reporting, complementing the
+stable ID.
 
 ## Consequences
 
 - Output is fully deterministic, making snapshot testing and diffing straightforward.
-- The type prefix eliminates ambiguity when referencing elements (no confusion between command 1 and text block 1).
-- Zero-based indexing aligns with array indexing in most programming languages, simplifying consumer code.
+- The type prefix eliminates ambiguity when referencing elements (no confusion between command 1 and
+  text block 1).
+- Zero-based indexing aligns with array indexing in most programming languages, simplifying consumer
+  code.
 - Independent counters mean inserting a new text block does not change command IDs, and vice versa.
-- The `range` field preserves source location for error reporting without overloading the ID with positional information.
+- The `range` field preserves source location for error reporting without overloading the ID with
+  positional information.

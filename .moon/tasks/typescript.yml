@@ -1,0 +1,61 @@
+$schema: "https://moonrepo.dev/schemas/tasks.json"
+
+inheritedBy:
+  toolchains: ["typescript"]
+
+fileGroups:
+  sources:
+    - "src/**/*"
+  tests:
+    - "src/**/*.spec.ts"
+    - "tests/**/*"
+
+tasks:
+  check-type:
+    command: "tsc"
+    args: ["--noEmit"]
+    toolchains: ["javascript", "node"]
+    inputs:
+      - "@group(sources)"
+      - "@group(tests)"
+      - "/tsconfig.json"
+    outputs: []
+
+  lint-ox:
+    command: "oxlint"
+    args: ["--config", "$workspaceRoot/.oxlintrc.json"]
+    toolchains: ["javascript", "node"]
+    inputs:
+      - "@group(sources)"
+      - "@group(tests)"
+      - "/.oxlintrc.json"
+    outputs: []
+    options:
+      affectedFiles: true
+
+  lint-es:
+    command: "eslint"
+    args: ["-c", "$workspaceRoot/eslint.config.mjs"]
+    toolchains: ["javascript", "node"]
+    deps:
+      - "~:lint-ox"
+    inputs:
+      - "@group(sources)"
+      - "@group(tests)"
+      - "/eslint.config.mjs"
+    outputs: []
+    options:
+      affectedFiles: true
+
+  lint:
+    command: "noop"
+    deps:
+      - "~:lint-es"
+
+  test:
+    command: "bun"
+    args: ["test"]
+    toolchains: ["bun"]
+    inputs:
+      - "@group(sources)"
+      - "@group(tests)"

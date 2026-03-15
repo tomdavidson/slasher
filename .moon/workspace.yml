@@ -1,0 +1,37 @@
+$schema: "https://moonrepo.dev/schemas/workspace.json"
+
+projects:
+  - "wit"
+  - "parser"
+  - "wasm-*"
+  - "slash-*"
+  - "riff*"
+  - "website"
+  - "docs"
+
+constraints:
+  enforceLayerRelationships: true
+  tagRelationships:
+    core: []
+    wasm: ["core"]
+    sdk: ["wasm", "core"]
+    cli: ["sdk", "core"]
+    pkg: ["cli"]
+    docs: ["docs"]
+
+generator:
+  templates:
+    - ".moon/templates"
+
+vcs:
+  provider: "github"
+  defaultBranch: "main"
+  sync: true
+  hooks:
+    pre-push:
+      - "moon run :lint --affected"
+      - "moon run :fmt-check --affected"
+      - "moon run :test --affected"
+
+hasher:
+  optimization: "accuracy"

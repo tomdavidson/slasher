@@ -1,0 +1,61 @@
+{
+  "$schema": "https://dprint.dev/schemas/v0.json",
+  "lineWidth": 110,
+  "indentWidth": 2,
+  "useTabs": false,
+  "newLineKind": "lf",
+  "typescript": {
+    "quoteStyle": "preferSingle",
+    "jsx.quoteStyle": "preferSingle",
+    "semiColons": "asi",
+    "trailingCommas": "onlyMultiLine",
+    "arrowFunction.useParentheses": "preferNone",
+    "preferSingleLine": true,
+    "operatorPosition": "sameLine",
+    "binaryExpression.linePerExpression": false,
+    "memberExpression.linePerExpression": false,
+    "conditionalExpression.linePerExpression": true,
+    "parameters.preferSingleLine": true,
+    "arguments.preferSingleLine": true,
+    "typeLiteral.separatorKind": "semiColon",
+    "enumDeclaration.memberSpacing": "newLine",
+    "importDeclaration.sortNamedImports": "caseInsensitive",
+    "exportDeclaration.sortNamedExports": "caseInsensitive",
+    "module.sortImportDeclarations": "caseInsensitive",
+    "module.sortExportDeclarations": "caseInsensitive"
+  },
+  "json": {
+    "indentWidth": 2,
+    "trailingCommas": "never"
+  },
+  "markdown": {
+    "lineWidth": 100,
+    "textWrap": "always"
+  },
+  "toml": {},
+  "yaml": {},
+  "exec": {
+    "cwd": "${configDir}",
+    "commands": [
+      {
+        "command": "rustfmt --edition 2024",
+        "exts": [
+          "rs"
+        ]
+      }
+    ]
+  },
+  "excludes": [
+    "**/*-lock.json",
+    "**/dist",
+    "**/coverage"
+  ],
+  "plugins": [
+    "https://plugins.dprint.dev/typescript-0.95.8.wasm",
+    "https://plugins.dprint.dev/json-0.20.0.wasm",
+    "https://plugins.dprint.dev/markdown-0.19.0.wasm",
+    "https://plugins.dprint.dev/toml-0.6.4.wasm",
+    "https://plugins.dprint.dev/g-plane/pretty_yaml-v0.5.1.wasm",
+    "https://plugins.dprint.dev/exec-0.6.0.json@a054130d458f124f9b5c91484833828950723a5af3f8ff2bd1523bd47b83b364"
+  ]
+}

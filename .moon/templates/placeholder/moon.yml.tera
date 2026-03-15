@@ -1,0 +1,9 @@
+# $schema: https://moonrepo.dev/schemas/project.json
+
+language: "{{ language }}"
+
+tags: ["{{ tag }}"]
+
+workspace:
+  inheritedTasks:
+    include: []

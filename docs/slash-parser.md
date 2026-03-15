@@ -1,8 +1,9 @@
-# small Rust+WASM “slash command parser” component with a JSON-in / JSON-out API, 
+# small Rust+WASM “slash command parser” component with a JSON-in / JSON-out API,
 
 ## style and patterns
-code snippets and patterns in this doc other than the parser semantics are only examples. 
-The language, build, and testing patterns override and should be followed.
+
+code snippets and patterns in this doc other than the parser semantics are only examples. The
+language, build, and testing patterns override and should be followed.
 
 - toms-clean-code.md
 - toms-clean-arch.md
@@ -18,20 +19,21 @@ The language, build, and testing patterns override and should be followed.
 - Compilation target: WebAssembly
 - Binding strategy: `wasm-bindgen` for JS/TS environments.[^1][^2]
 - Interface style:
-    - Input: UTF‑8 text (string).
-    - Output: UTF‑8 JSON string conforming to a provided JSON Schema.
+  - Input: UTF‑8 text (string).
+  - Output: UTF‑8 JSON string conforming to a provided JSON Schema.
 
 Responsibilities:
 
 1. Parse an input text buffer using the **slash-command semantics** described below.
 2. Emit a JSON document describing:
-    - All detected commands and their arguments,
-    - Optional non-command text blocks,
-    - A context object.
+   - All detected commands and their arguments,
+   - Optional non-command text blocks,
+   - A context object.
 
-The WASM module must be deterministic and pure (no I/O, no global mutable state aside from internal caches).
+The WASM module must be deterministic and pure (no I/O, no global mutable state aside from internal
+caches).
 
-***
+---
 
 ## 2. Parsing semantics (Rust core)
 
@@ -42,7 +44,6 @@ The Rust core must implement the exact language you’ve defined:
 - Input is a `&str` (UTF‑8 text).
 - The parser processes it line-by-line, splitting on `\n`.
 - `\r\n` must be normalized to `\n` before parsing.
-
 
 ### 2.2 Command lines
 
@@ -56,9 +57,10 @@ Structure:
 
 Non-command lines:
 
-- Lines that do not start with `/` (ignoring leading whitespace) are considered **non-command text** when the parser is in `idle` state.
-- If a command is currently being accumulated, non-command lines are appended to that command’s payload (depending on the state).
-
+- Lines that do not start with `/` (ignoring leading whitespace) are considered **non-command text**
+  when the parser is in `idle` state.
+- If a command is currently being accumulated, non-command lines are appended to that command’s
+  payload (depending on the state).
 
 ### 2.3 States
 
@@ -74,25 +76,26 @@ State transitions are driven by:
 - Continuation marker `" /"`,
 - Fence openers / closers.
 
-
 ### 2.4 Continuation with `" /"`
 
 Continuation is explicit and conservative:
 
-- A line continues the current command if and only if it ends with **space + slash** (`" /"`) immediately before the newline.
+- A line continues the current command if and only if it ends with **space + slash** (`" /"`)
+  immediately before the newline.
 
 Semantics:
 
 - In `Accumulating` (or on the first header line of a command):
-    - If the line ends with `" /"`:
-        - Remove the trailing `" /"` from the line content.
-        - Append the remaining content plus `\n` to `arguments.payload`.
-        - Stay in `Accumulating`.
-    - If the line does not end with `" /"` and does not start a fence:
-        - Append the full line content plus `\n`.
-        - Finalize the command and return to `Idle`.
+  - If the line ends with `" /"`:
+    - Remove the trailing `" /"` from the line content.
+    - Append the remaining content plus `\n` to `arguments.payload`.
+    - Stay in `Accumulating`.
+  - If the line does not end with `" /"` and does not start a fence:
+    - Append the full line content plus `\n`.
+    - Finalize the command and return to `Idle`.
 
-Note: `" /"` must be checked literally; a line ending in `/` with no preceding space is **not** a continuation marker. This avoids collisions with paths like `/var/log/`.
+Note: `" /"` must be checked literally; a line ending in `/` with no preceding space is **not** a
+continuation marker. This avoids collisions with paths like `/var/log/`.
 
 ### 2.5 Fenced block arguments
 
@@ -103,20 +106,21 @@ Use markdown-style fenced code blocks:[^3][^4]
 Fence openers can appear:
 
 1. **Inline on the command line**:
-    - Inside `<arguments.header>`, find the first occurrence of three or more consecutive backticks: ```…
-    - Everything before the backticks remains in `arguments.header`.
-    - The backticks and optional language identifier (e.g., `jsonl`) mark the start of fence mode.
+   - Inside `<arguments.header>`, find the first occurrence of three or more consecutive backticks:
+     ```…
+     ```
+   - Everything before the backticks remains in `arguments.header`.
+   - The backticks and optional language identifier (e.g., `jsonl`) mark the start of fence mode.
 2. **On the next line after continuation**:
-    - The command line ends with `" /"` and the parser enters `Accumulating`.
-    - The next line starts with the fence opener ```[lang].
-    - The parser transitions to `InFence`.
+   - The command line ends with `" /"` and the parser enters `Accumulating`.
+   - The next line starts with the fence opener ```[lang].
+   - The parser transitions to `InFence`.
 
 Fence metadata:
 
 - Record:
-    - Fence marker: number of backticks (typically 3).
-    - Optional `lang` following the backticks (up to first whitespace).
-
+  - Fence marker: number of backticks (typically 3).
+  - Optional `lang` following the backticks (up to first whitespace).
 
 #### Fence mode
 
@@ -124,7 +128,8 @@ In `InFence`:
 
 - Every line is appended verbatim to `arguments.payload` with a trailing `\n`.
 - `" /"` has no special meaning inside the fence.
-- The parser looks for a closing fence: a line whose first non-whitespace characters are the same number of backticks and nothing else but whitespace.
+- The parser looks for a closing fence: a line whose first non-whitespace characters are the same
+  number of backticks and nothing else but whitespace.
 
 On closing fence:
 
@@ -134,7 +139,6 @@ On closing fence:
 - `arguments.fence_lang` is set to the captured language or `null`.
 - Parser returns to `Idle`.
 
-
 ### 2.6 Multiple commands
 
 - In `Idle`, when a command line appears, start a new command.
@@ -143,7 +147,7 @@ On closing fence:
 
 You can treat lines that fall entirely outside commands as text blocks grouped by contiguous ranges.
 
-***
+---
 
 ## 3. JSON output format
 
@@ -151,52 +155,53 @@ The Rust core will produce a JSON value of type `SlashParseResult`:
 
 ```ts
 interface SlashParseResult {
-  version: string;            // e.g., "0.1.0"
+  version: string // e.g., "0.1.0"
   context: {
-    source?: string;
-    timestamp?: string;       // ISO 8601, if provided by caller
-    user?: string;
-    session_id?: string;
-    extra?: Record<string, unknown>;
-    [key: string]: unknown;
-  };
-  commands: Command[];
-  text_blocks?: TextBlock[];
+    source?: string
+    timestamp?: string // ISO 8601, if provided by caller
+    user?: string
+    session_id?: string
+    extra?: Record<string, unknown>
+    [key: string]: unknown
+  }
+  commands: Command[]
+  text_blocks?: TextBlock[]
 }
 
 interface CommandRange {
-  start_line: number;         // 0-based or 1-based (document in spec)
-  end_line: number;
+  start_line: number // 0-based or 1-based (document in spec)
+  end_line: number
 }
 
-type ArgumentMode = "single-line" | "continuation" | "fence";
+type ArgumentMode = 'single-line' | 'continuation' | 'fence'
 
 interface CommandArguments {
-  header?: string;
-  mode: ArgumentMode;
-  fence_lang?: string | null;
-  payload: string;
+  header?: string
+  mode: ArgumentMode
+  fence_lang?: string | null
+  payload: string
 }
 
 interface Command {
-  id: string;
-  name: string;
-  raw?: string;
-  range: CommandRange;
-  arguments: CommandArguments;
-  children?: Command[];       // reserved
+  id: string
+  name: string
+  raw?: string
+  range: CommandRange
+  arguments: CommandArguments
+  children?: Command[] // reserved
 }
 
 interface TextBlock {
-  id: string;
-  range: CommandRange;
-  content: string;
+  id: string
+  range: CommandRange
+  content: string
 }
 ```
 
-The JSON Schema in your previous step applies; the Rust types should be defined to match that schema, using `serde` for serialization.[^5][^6][^7]
+The JSON Schema in your previous step applies; the Rust types should be defined to match that
+schema, using `serde` for serialization.[^5][^6][^7]
 
-***
+---
 
 ## 4. WASM API design
 
@@ -221,7 +226,6 @@ pub fn parse_slash_commands(
 
 - `ParseError` should include at least a message and optionally a line/column.
 
-
 ### 4.2 wasm-bindgen exports
 
 Use `wasm-bindgen` to expose a JS-friendly API:[^8][^2][^1]
@@ -230,8 +234,8 @@ Use `wasm-bindgen` to expose a JS-friendly API:[^8][^2][^1]
 - Exported functions:
 
 ```rust
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
-use serde::{Serialize, Deserialize};
 
 #[wasm_bindgen]
 pub fn parse_text(input: &str) -> Result<JsValue, JsValue>;
@@ -243,40 +247,39 @@ pub fn parse_text_with_context(input: &str, context: &JsValue) -> Result<JsValue
 Semantics:
 
 - `parse_text`:
-    - Uses a default `ParserContext { source: None, ... }`.
-    - Returns a `JsValue` containing a JSON object conforming to `SlashParseResult`, via `JsValue::from_serde(&result)`.
+  - Uses a default `ParserContext { source: None, ... }`.
+  - Returns a `JsValue` containing a JSON object conforming to `SlashParseResult`, via
+    `JsValue::from_serde(&result)`.
 - `parse_text_with_context`:
-    - `context` is optional; if provided, it is interpreted as a JS object containing any of:
-        - `source`, `timestamp`, `user`, `session_id`, `extra`.
-    - Rust side should `from_serde` the context into `ParserContext` (or build it manually from `JsValue`).[^9]
-    - Returns the same JSON structure as `parse_text`.
+  - `context` is optional; if provided, it is interpreted as a JS object containing any of:
+    - `source`, `timestamp`, `user`, `session_id`, `extra`.
+  - Rust side should `from_serde` the context into `ParserContext` (or build it manually from
+    `JsValue`).[^9]
+  - Returns the same JSON structure as `parse_text`.
 
 On error:
 
-- Return a `JsValue` representing a JS `Error` or a structured `{ error: string, line?: number, column?: number }`.
-
+- Return a `JsValue` representing a JS `Error` or a structured
+  `{ error: string, line?: number, column?: number }`.
 
 ### 4.3 JS / TS usage expectations
 
 Consumers (e.g. a Node-based or browser-based tool) will:
 
 ```ts
-import init, { parse_text, parse_text_with_context } from "slash_parser";
+import init, { parse_text, parse_text_with_context } from 'slash_parser'
 
-await init(); // or equivalent wasm-bindgen init
+await init() // or equivalent wasm-bindgen init
 
-const result = parse_text_with_context(sourceText, {
-  source: "file://path/to/doc.md",
-  user: "tom",
-});
+const result = parse_text_with_context(sourceText, { source: 'file://path/to/doc.md', user: 'tom' })
 
 // `result` is a JS object matching SlashParseResult
-console.log(result.commands);
+console.log(result.commands)
 ```
 
 The bindings should be compatible with bundlers (Vite, Webpack) and Node 18+.
 
-***
+---
 
 ## 5. Non-goals / constraints
 
@@ -286,10 +289,8 @@ To keep Perplexity Computer’s scope tight:
 - No global config: all configuration is via parameters or context.
 - No incremental parsing: first version can parse whole strings only.
 - No reliance on external crates beyond:
-    - `serde`, `serde_json`,
-    - `wasm-bindgen` (and its minimal dependencies).
-
-
+  - `serde`, `serde_json`,
+  - `wasm-bindgen` (and its minimal dependencies).
 
 [^1]: https://rustwasm.github.io/docs/wasm-bindgen/
 
@@ -330,4 +331,3 @@ To keep Perplexity Computer’s scope tight:
 [^19]: https://gov.near.org/t/proposal-use-webassembly-interface-types-to-describe-all-standards-interfaces-and-application-contract-interface-aci/23256
 
 [^20]: https://developer.mozilla.org/en-US/docs/WebAssembly/Guides/Concepts
-

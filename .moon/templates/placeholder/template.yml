@@ -1,0 +1,11 @@
+# $schema: https://moonrepo.dev/schemas/template.json
+title: "Placeholder Project"
+description: "Generates an empty placeholder project that excludes inherited tasks."
+
+variables:
+  language:
+    type: "string"
+    default: "unknown"
+  tag:
+    type: "string"
+    default: "core"
