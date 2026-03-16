@@ -2,3 +2,10 @@ $schema: "https://moonrepo.dev/schemas/project.json"
 id: "parser"
 language: "rust"
 tags: ["core"]
+
+tasks:
+  fuzz:
+    command: "cargo"
+    args: ["hfuzz", "run", "parser"]
+    options:
+      runInCI: false

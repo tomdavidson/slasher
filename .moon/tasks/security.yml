@@ -4,17 +4,11 @@ tasks:
   semgrep:
     command: "semgrep"
     args: ["--config", "auto", "--error", "."]
-    options:
-      runInCI: false
 
   gitleaks:
     command: "gitleaks"
     args: ["detect", "--source", ".", "-v"]
-    options:
-      runInCI: false
 
   tangleguard:
     command: "echo"
-    args: ["TangleGuard placeholder — not yet implemented"]
-    options:
-      runInCI: false
+    args: ["TangleGuard placeholder \u2014 not yet implemented"]

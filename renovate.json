@@ -3,26 +3,39 @@
   "extends": [
     "config:recommended"
   ],
-  "labels": ["dependencies"],
+  "labels": [
+    "dependencies"
+  ],
   "packageRules": [
     {
-      "matchManagers": ["cargo"],
+      "matchManagers": [
+        "cargo"
+      ],
       "groupName": "rust dependencies"
     },
     {
-      "matchManagers": ["npm"],
-      "groupName": "npm dependencies"
+      "matchManagers": [
+        "pnpm"
+      ],
+      "groupName": "pnpm dependencies"
     },
     {
-      "matchManagers": ["pip_requirements", "poetry"],
+      "matchManagers": [
+        "pip_requirements",
+        "poetry"
+      ],
       "groupName": "python dependencies"
     },
     {
-      "matchManagers": ["gomod"],
+      "matchManagers": [
+        "gomod"
+      ],
       "groupName": "go dependencies"
     },
     {
-      "matchManagers": ["github-actions"],
+      "matchManagers": [
+        "github-actions"
+      ],
       "groupName": "github actions"
     }
   ]

@@ -86,8 +86,6 @@ tasks:
     inputs:
       - "@group(cargo)"
     env: *env
-    options:
-      runInCI: false
 
   cargo-deny:
     command: "cargo"
@@ -95,5 +93,3 @@ tasks:
     inputs:
       - "@group(cargo)"
     env: *env
-    options:
-      runInCI: false

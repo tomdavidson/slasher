@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Attach wasm-javascript build artifacts to the current GitHub Release
-# Expects GITHUB_TOKEN and GITHUB_REF_NAME to be set
+# Run from repo root. Expects GITHUB_TOKEN and GITHUB_REF_NAME to be set.
 
 artifact_dir="wasm-javascript/pkg"
 

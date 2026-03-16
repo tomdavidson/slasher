@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Attach wasm-wasi + WIT artifacts to the current GitHub Release
-# Expects GITHUB_TOKEN and GITHUB_REF_NAME to be set
+# Run from repo root. Expects GITHUB_TOKEN and GITHUB_REF_NAME to be set.
 
 wasm_dir="wasm-wasi/target/wasm32-wasip2/release"
 wit_dir="wasm-wasi/wit"
