@@ -1,0 +1,42 @@
+# .github/actions/moon-ci/action.yml
+#
+# Usage:
+#   - uses: ./.github/actions/moon-ci
+#     with:
+#       job-index: ${{ matrix.index }}
+#       job-total: 2
+#       access-token: ${{ secrets.GITHUB_TOKEN }}
+#       matrix-json: ${{ toJSON(matrix) }}
+
+name: "Moon CI"
+description: "Run moon ci with reporting and retrospect"
+
+inputs:
+  job-index:
+    required: true
+    description: "Matrix job index"
+  job-total:
+    required: true
+    default: "2"
+  access-token:
+    required: true
+    description: "GITHUB_TOKEN for run report"
+  matrix-json:
+    required: true
+    description: "toJSON(matrix) for run report"
+
+runs:
+  using: composite
+  steps:
+    - name: Moon CI
+      shell: bash
+      run: moon ci --color --job ${{ inputs.job-index }} --job-total ${{ inputs.job-total }}
+
+    - uses: moonrepo/run-report-action@v1
+      if: success() || failure()
+      with:
+        access-token: ${{ inputs.access-token }}
+        matrix: ${{ inputs.matrix-json }}
+
+    - uses: appthrust/moon-ci-retrospect@v1
+      if: success() || failure()
