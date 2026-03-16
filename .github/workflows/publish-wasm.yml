@@ -1,0 +1,58 @@
+# NOTE: Hand-authored. TODO: Generate from Moon Tera templates (.moon/templates/publish-workflows/)
+name: Publish WASM + WIT
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g., wasm-javascript-v1.0.0 or wasm-wasi-v1.0.0)"
+        required: true
+
+jobs:
+  publish-wasm-javascript:
+    if: >-
+      (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'wasm-javascript-v'))
+      || (github.event_name == 'workflow_dispatch' && startsWith(github.event.inputs.tag, 'wasm-javascript-v'))
+    runs-on: ubuntu-latest
+    environment: publish
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: moonrepo/setup-toolchain@v0
+        with:
+          auto-install: true
+
+      - name: Build wasm-javascript
+        run: moon run wasm-javascript:build
+
+      - name: Attach artifacts to GitHub Release
+        run: ./scripts/attach-wasm-javascript.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-wasm-wasi:
+    if: >-
+      (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'wasm-wasi-v'))
+      || (github.event_name == 'workflow_dispatch' && startsWith(github.event.inputs.tag, 'wasm-wasi-v'))
+    runs-on: ubuntu-latest
+    environment: publish
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: moonrepo/setup-toolchain@v0
+        with:
+          auto-install: true
+
+      - name: Build wasm-wasi + WIT
+        run: moon run wasm-wasi:build
+
+      - name: Attach wasm-wasi and WIT artifacts to GitHub Release
+        run: ./scripts/attach-wasm-wasi.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

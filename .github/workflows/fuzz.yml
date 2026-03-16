@@ -1,0 +1,36 @@
+name: Fuzz
+
+on:
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: "Fuzz duration (e.g., 60s, 10m, 1h)"
+        required: false
+        default: "10m"
+
+jobs:
+  fuzz:
+    name: Fuzz Parser
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: moonrepo/setup-toolchain@v0
+        with:
+          auto-install: true
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz
+
+      - name: Run fuzzer
+        run: |
+          cd fuzz
+          cargo fuzz run fuzz_parser -- -max_total_time=${{ github.event.inputs.duration == '' && '600' || github.event.inputs.duration }}
+        continue-on-error: true
+
+      - name: Upload crash artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crashes
+          path: fuzz/artifacts/

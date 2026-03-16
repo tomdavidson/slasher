@@ -72,3 +72,28 @@ tasks:
       - "@group(tests)"
       - "/.config/nextest.*"
     env: *env
+
+  fmt-check:
+    command: "cargo fmt --check"
+    inputs:
+      - "@group(cargo)"
+      - "@group(sources)"
+    env: *env
+
+  cargo-audit:
+    command: "cargo"
+    args: ["audit"]
+    inputs:
+      - "@group(cargo)"
+    env: *env
+    options:
+      runInCI: false
+
+  cargo-deny:
+    command: "cargo"
+    args: ["deny", "check"]
+    inputs:
+      - "@group(cargo)"
+    env: *env
+    options:
+      runInCI: false

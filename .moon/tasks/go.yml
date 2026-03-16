@@ -1,0 +1,36 @@
+$schema: "https://moonrepo.dev/schemas/tasks.json"
+
+fileGroups:
+  sources:
+    - "**/*.go"
+    - "go.mod"
+    - "go.sum"
+  tests:
+    - "**/*_test.go"
+
+tasks:
+  lint:
+    command: "go"
+    args: ["vet", "./..."]
+    inputs:
+      - "@group(sources)"
+
+  fmt-check:
+    script: "test -z \"$(gofmt -l .)\""
+    inputs:
+      - "@group(sources)"
+
+  test:
+    command: "go"
+    args: ["test", "./..."]
+    inputs:
+      - "@group(sources)"
+      - "@group(tests)"
+
+  build:
+    command: "go"
+    args: ["build", "./..."]
+    inputs:
+      - "@group(sources)"
+    outputs:
+      - "bin"

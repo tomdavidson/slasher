@@ -1,8 +1,7 @@
-# $schema: https://moonrepo.dev/schemas/project.json
-
-language: "unknown"
-
-tags: ["core"]
+$schema: "https://moonrepo.dev/schemas/project.json"
+language: "typescript"
+type: "application"
+tags: ["docs"]
 
 workspace:
   inheritedTasks:

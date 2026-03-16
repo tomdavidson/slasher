@@ -1,9 +1,12 @@
-# $schema: https://moonrepo.dev/schemas/project.json
+$schema: "https://moonrepo.dev/schemas/project.json"
+id: "riff-cli"
+language: "rust"
+type: "application"
+tags: ["cli"]
 
-language: "unknown"
-
-tags: ["core"]
-
-workspace:
-  inheritedTasks:
-    include: []
+tasks:
+  publish:
+    command: "goreleaser"
+    args: ["release", "--clean", "--config", "riff-cli/.goreleaser.yaml"]
+    options:
+      runInCI: false

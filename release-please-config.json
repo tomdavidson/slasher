@@ -1,0 +1,70 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "plugins": [
+    {
+      "type": "cargo-workspace"
+    },
+    {
+      "type": "linked-versions",
+      "groupName": "parser-group",
+      "components": [
+        "parser",
+        "wasm-javascript",
+        "wasm-wasi",
+        "spec"
+      ]
+    }
+  ],
+  "release-type": "rust",
+  "bump-minor-pre-major": true,
+  "bump-patch-for-minor-pre-major": true,
+  "separate-pull-requests": false,
+  "include-component-in-tag": true,
+  "include-v-in-tag": true,
+  "tag-separator": "-",
+  "packages": {
+    "parser": {
+      "release-type": "rust",
+      "component": "parser"
+    },
+    "wasm-javascript": {
+      "release-type": "rust",
+      "component": "wasm-javascript"
+    },
+    "wasm-wasi": {
+      "release-type": "rust",
+      "component": "wasm-wasi"
+    },
+    "spec": {
+      "release-type": "simple",
+      "component": "spec"
+    },
+    "riff-cli": {
+      "path": "riff-cli",
+      "release-type": "rust",
+      "component": "riff"
+    },
+    "slash-rust": {
+      "release-type": "rust",
+      "component": "slash-rust"
+    },
+    "slash-javascript": {
+      "release-type": "node",
+      "component": "slash-javascript"
+    },
+    "slash-web": {
+      "release-type": "node",
+      "component": "slash-web"
+    },
+    "slash-python": {
+      "release-type": "python",
+      "component": "slash-python"
+    },
+    "slash-go": {
+      "release-type": "go",
+      "component": "slash-go",
+      "tag-separator": "/",
+      "include-v-in-tag": true
+    }
+  }
+}

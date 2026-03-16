@@ -1,0 +1,42 @@
+$schema: "https://moonrepo.dev/schemas/tasks.json"
+
+fileGroups:
+  sources:
+    - "**/*.py"
+    - "pyproject.toml"
+  tests:
+    - "tests/**/*.py"
+
+tasks:
+  lint:
+    command: "python"
+    args: ["-m", "ruff", "check", "."]
+    inputs:
+      - "@group(sources)"
+
+  fmt-check:
+    command: "python"
+    args: ["-m", "ruff", "format", ".", "--check"]
+    inputs:
+      - "@group(sources)"
+
+  test:
+    command: "python"
+    args: ["-m", "pytest"]
+    inputs:
+      - "@group(sources)"
+      - "@group(tests)"
+
+  typecheck:
+    command: "python"
+    args: ["-m", "mypy", "."]
+    inputs:
+      - "@group(sources)"
+
+  build:
+    command: "python"
+    args: ["-m", "build"]
+    inputs:
+      - "@group(sources)"
+    outputs:
+      - "dist"
