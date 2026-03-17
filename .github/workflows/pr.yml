@@ -20,6 +20,7 @@ jobs:
     name: Moon CI
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4 
       - uses: ./.github/actions/moon-setup
       - run: moon ci
 
@@ -30,6 +31,7 @@ jobs:
     permissions:
       security-events: write
     steps:
+      - uses: actions/checkout@v4 
       - uses: ./.github/actions/moon-setup
         with:
           cache: "false"
@@ -61,6 +63,7 @@ jobs:
       deployments: write
       contents: write
     steps:
+      - uses: actions/checkout@v4 
       - uses: ./.github/actions/moon-setup
       - uses: ./.github/actions/raa-open
         with:
