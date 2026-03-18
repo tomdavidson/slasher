@@ -1,0 +1,12 @@
+# Enforce “small functions” (Clean Code: 5–25 lines, allow a bit for Rust formatting)
+too-many-lines-threshold = 30
+
+# Enforce “2–3 params typical; 4+ suggests a data object” (Clean Code)
+too-many-arguments-threshold = 4
+
+# Complexity guardrail (closest analogue TS complexity/max-depth posture)
+cognitive-complexity-threshold = 8
+
+# Optional: approximate “max nesting depth 1–2”
+# Note: this is structural nesting
+excessive-nesting-threshold = 3

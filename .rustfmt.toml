@@ -1,0 +1,36 @@
+# ── Core: match dprint.json + .editorconfig ─────────────────────
+# Match dprint lineWidth
+max_width = 110
+# Match editorconfig indent_style = space
+hard_tabs = false
+# Rust community standard (differs from your TS indent of 2, intentionally)
+tab_spaces = 4
+# Match editorconfig end_of_line = lf
+newline_style = "Unix"
+# Like TS shorthand { id } instead of { id: id }
+use_field_init_shorthand = true
+
+# ── Expression density: match dprint preferSingleLine ───────────
+# Rustfmt defaults to breaking things across lines aggressively.
+# These keep short expressions on one line (same intent as dprint's preferSingleLine).
+# Allow short fn bodies on one line
+fn_single_line = true
+# Maximize single-line formatting for structs, calls, arrays, chains
+use_small_heuristics = "Max"
+
+# ── Imports: match dprint's sort behavior ────────────────────────
+# Alphabetical sort (matches dprint module.sortImportDeclarations)
+reorder_imports = true
+# Keep mod declarations sorted too
+reorder_modules = true
+
+# ── Unstable (require nightly rustfmt or cargo +nightly fmt) ─────
+# These are high-value options worth running nightly fmt for.
+# If you must stay on stable, comment these out; they'll emit warnings but not break.
+unstable_features = true
+# Merge imports per crate (reduces visual noise)
+imports_granularity = "Crate"
+# Group: std → external crates → crate (clean architecture readability)
+group_imports = "StdExternalCrate"
+# Keep doc examples formatted
+format_code_in_doc_comments = true

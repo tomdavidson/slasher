@@ -1,0 +1,221 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  // Built-in plugins only (no UI/react/etc).
+  "plugins": ["typescript", "import", "unicorn", "promise", "node", "oxc"],
+  "options": {
+    // Now that you installed tsgolint, keep this on.
+    // Equivalent to CLI: --type-aware
+    "typeAware": true,
+    // Optional (more expensive): TS compiler diagnostics.
+    // If you want "tsc-like" feedback during lint, turn on.
+    "typeCheck": true
+  },
+  "categories": {
+    // Maximize baseline coverage.
+    "correctness": "error",
+    "suspicious": "warn",
+    // Keep these explicit (don't enable wholesale), to avoid noisy/subjective churn:
+    "perf": "off",
+    "pedantic": "off",
+    "style": "off",
+    "restriction": "off",
+    "nursery": "off"
+  },
+  "rules": {
+    // ─────────────────────────────────────────────────────────────
+    // STRUCTURE / COMPLEXITY
+    // These look like formatting but enforce cognitive load limits.
+    // dprint controls how code *looks*; these control how code *thinks*.
+    // ─────────────────────────────────────────────────────────────
+    // SEMANTIC: caps branching depth, enforces guard-clause-first style.
+    // dprint cannot reason about control flow nesting.
+    "max-depth": ["error", { "max": 2 }],
+    // SEMANTIC: caps function size as a complexity proxy.
+    // dprint line-wrapping changes visual lines, but this counts logical lines
+    // (skipBlankLines + skipComments), which dprint doesn't track.
+    "max-lines-per-function": ["warn", { "max": 25, "skipBlankLines": true, "skipComments": true }],
+    // SEMANTIC: caps cyclomatic complexity (branch count).
+    // Pure control-flow metric, no formatting tool can replicate this.
+    "complexity": ["warn", { "max": 5 }],
+    // SEMANTIC: caps parameter count to enforce small function signatures.
+    // dprint wraps params visually; this limits how many you can have.
+    "max-params": ["error", { "max": 3 }],
+    // SEMANTIC: enforces guard-clause pattern (early return, no else after return).
+    // This is control-flow shape, not whitespace. dprint cannot decide when
+    // an else block is logically redundant.
+    "no-else-return": "error",
+    // SEMANTIC: bans nested ternaries to prevent unreadable conditional chains.
+    // dprint formats ternaries but cannot judge nesting depth or readability.
+    "no-nested-ternary": "error",
+    // DISABLED: dprint handles ternary formatting; this rule's autofix
+    // rewrites `x ? true : false` to `!!x` which is a style preference
+    // that overlaps with typescript/strict-boolean-expressions.
+    // "no-unneeded-ternary": "error",
+    // ─────────────────────────────────────────────────────────────
+    // IMMUTABILITY SUPPORT (closest oxlint can get to functional/immutable-data)
+    // ─────────────────────────────────────────────────────────────
+    "no-var": "error",
+    "prefer-const": "error",
+    "no-param-reassign": "error",
+    // DISABLED: pure formatting preference. dprint handles spread formatting
+    // via its own rules. The *semantic* immutability enforcement comes from
+    // functional/immutable-data in ESLint.
+    // "prefer-object-spread": "error",
+    "no-object-constructor": "error",
+    "no-array-constructor": "error",
+    // Perf+immutability footguns
+    "oxc/no-accumulating-spread": "warn",
+    // Spread over Object.assign
+    "unicorn/prefer-spread": "warn",
+    // ─────────────────────────────────────────────────────────────
+    // NO NULLS / OPTION-ISH STYLE
+    // ─────────────────────────────────────────────────────────────
+    "unicorn/no-null": "warn",
+    "unicorn/no-useless-undefined": "warn",
+    "typescript/prefer-nullish-coalescing": "warn",
+    "typescript/prefer-optional-chain": "warn",
+    // ─────────────────────────────────────────────────────────────
+    // DECLARATIVE ITERATION (nudges; ESLint functional still bans loops fully)
+    // ─────────────────────────────────────────────────────────────
+    "unicorn/no-for-loop": "error",
+    "unicorn/no-array-for-each": "warn",
+    "unicorn/prefer-array-flat-map": "error",
+    "unicorn/prefer-array-find": "error",
+    "unicorn/prefer-array-some": "error",
+    "unicorn/prefer-array-index-of": "error",
+    "unicorn/no-array-reduce": "allow",
+    "unicorn/no-array-push-push": "warn",
+    "unicorn/prefer-set-has": "warn",
+    // ─────────────────────────────────────────────────────────────
+    // ASYNC / PROMISE SAFETY (type-aware + runtime-ish)
+    // ─────────────────────────────────────────────────────────────
+    "typescript/no-floating-promises": ["error", { "ignoreVoid": true }],
+    "typescript/no-misused-promises": "error",
+    "typescript/promise-function-async": "off",
+    "typescript/return-await": "error",
+    "unicorn/no-await-in-promise-methods": "error",
+    "unicorn/no-single-promise-in-promise-methods": "error",
+    "unicorn/no-unnecessary-await": "error",
+    "unicorn/no-thenable": "error",
+    "promise/no-new-statics": "error",
+    "promise/no-multiple-resolved": "warn",
+    "promise/valid-params": "error",
+    // Supports ResultAsync-first stance: loops should use ResultAsync.combine
+    // or similar, not sequential awaits.
+    "no-await-in-loop": "warn",
+    // ─────────────────────────────────────────────────────────────
+    // TYPE SAFETY / UNION EXHAUSTIVENESS
+    // ─────────────────────────────────────────────────────────────
+    "typescript/switch-exhaustiveness-check": "error",
+    "typescript/strict-boolean-expressions": "warn",
+    "typescript/no-explicit-any": "warn",
+    "typescript/no-unsafe-return": "error",
+    "typescript/no-unsafe-argument": "error",
+    // "Max coverage" extras (may add noise, but reduce unsafe-any creep)
+    "typescript/no-unsafe-assignment": "warn",
+    "typescript/no-unsafe-call": "warn",
+    "typescript/no-unsafe-member-access": "warn",
+    "typescript/no-non-null-assertion": "warn",
+    "typescript/no-unnecessary-type-assertion": "warn",
+    "typescript/no-unnecessary-type-arguments": "warn",
+    // Discriminated unions over interfaces: enforce `type` keyword
+    "typescript/consistent-type-definitions": ["error", "type"],
+    // Keep TS escape hatches honest
+    "typescript/ban-ts-comment": [
+      "warn",
+      {
+        "ts-ignore": "allow-with-description",
+        "ts-expect-error": "allow-with-description",
+        "ts-nocheck": true,
+        "minimumDescriptionLength": 5
+      }
+    ],
+    // ─────────────────────────────────────────────────────────────
+    // MODULE HYGIENE / IMPORTS
+    // ─────────────────────────────────────────────────────────────
+    "import/no-default-export": "error",
+    "import/no-cycle": "error",
+    "import/no-self-import": "error",
+    // DISABLED: dprint handles import deduplication and sorting via
+    // module.sortImportDeclarations and importDeclaration.sortNamedImports.
+    // "import/no-duplicates": "warn",
+    "typescript/consistent-type-imports": "warn",
+    // ─────────────────────────────────────────────────────────────
+    // NODE/BUN SERVER HYGIENE
+    // ─────────────────────────────────────────────────────────────
+    "node/no-exports-assign": "error",
+    "node/no-new-require": "error",
+    "node/no-path-concat": "error",
+    "node/no-process-env": "warn",
+    "unicorn/prefer-node-protocol": "error",
+    // ─────────────────────────────────────────────────────────────
+    // ERROR QUALITY (even if you avoid throw, shells still throw sometimes)
+    // ─────────────────────────────────────────────────────────────
+    "unicorn/error-message": "error",
+    "unicorn/throw-new-error": "error",
+    "unicorn/prefer-type-error": "warn",
+    "no-throw-literal": "error",
+    "prefer-promise-reject-errors": "error",
+    // ─────────────────────────────────────────────────────────────
+    // FP-ADJACENT "NO CLASSES AS NAMESPACES" HELPERS
+    // (not a full ban; ESLint functional still does the heavy lifting)
+    // ─────────────────────────────────────────────────────────────
+    "unicorn/no-static-only-class": "error",
+    "typescript/no-extraneous-class": "warn",
+    "class-methods-use-this": "warn",
+    // ─────────────────────────────────────────────────────────────
+    // GENERAL HYGIENE
+    // ─────────────────────────────────────────────────────────────
+    "no-console": ["warn", { "allow": ["error", "warn"] }],
+    "no-debugger": "error",
+    "no-eval": "error",
+    "eqeqeq": "error",
+    "no-implicit-coercion": "error",
+    "no-shadow": "warn",
+    "no-magic-numbers": ["warn", { "ignore": [0, 1, -1], "enforceConst": true }],
+    "no-void": ["error", { "allowAsStatement": true }],
+    "unicorn/no-empty-file": "error",
+    // Subtle "dead code" / refactor safety
+    "no-useless-assignment": "warn",
+    // Small performance-ish correctness
+    "oxc/approx-constant": "warn",
+    "no-useless-call": "warn",
+    // (Opinionated restrictions that typically match FP/clarity)
+    "no-labels": "error",
+    "no-with": "error",
+    "no-sequences": "error",
+    "no-extend-native": "error",
+    "no-proto": "error",
+    "no-iterator": "error",
+    "no-new-wrappers": "error",
+    "no-bitwise": "warn",
+    "arrow-body-style": ["warn", "as-needed"],
+    "unicorn/prefer-ternary": ["warn", "only-single-line"],
+    // Positive predicates: prefer `if (ready)` over `if (!notReady)`
+    "unicorn/no-negated-condition": "warn"
+  },
+  "overrides": [{
+    // TESTS: loosen ergonomics
+    "files": ["*.spec.ts", "*.test.ts", "src/test/**/*.ts"],
+    "rules": {
+      "max-params": "off",
+      "max-depth": "off",
+      "max-lines-per-function": "off",
+      "complexity": "off",
+      "no-magic-numbers": "off",
+      "no-param-reassign": "off",
+      "typescript/no-explicit-any": "off",
+      "typescript/no-unsafe-argument": "off",
+      "typescript/no-unsafe-return": "off",
+      "typescript/no-unsafe-assignment": "off",
+      "typescript/no-unsafe-call": "off",
+      "typescript/no-unsafe-member-access": "off",
+      "typescript/no-non-null-assertion": "off",
+      "unicorn/no-null": "off",
+      "unicorn/no-array-reduce": "off",
+      "unicorn/consistent-function-scoping": "off",
+      "node/no-process-env": "off"
+    }
+  }],
+  "ignorePatterns": ["node_modules", "dist"]
+}
