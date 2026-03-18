@@ -87,11 +87,7 @@ Each element in `commands` is:
 Each element in `text_blocks` is:
 
 ```json
-{
-  "id": "text-0",
-  "range": { "start_line": 0, "end_line": 9 },
-  "content": "arbitrary text\n..."
-}
+{ "id": "text-0", "range": { "start_line": 0, "end_line": 9 }, "content": "arbitrary text\n..." }
 ```
 
 - `id`: unique identifier per ADR-0008 (`text-0`, `text-1`, etc.).

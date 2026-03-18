@@ -14,3 +14,90 @@ repository = "https://github.com/tomdavidson/slash-parser"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
+
+[workspace.lints.rust]
+# Safety baseline: no unsafe unless explicitly justified
+unsafe_code = "forbid"
+# Debug is cheap observability; helpful at boundaries
+missing_debug_implementations = "warn"
+# Keep APIs intentionally small; helps encapsulation
+unreachable_pub = "warn"
+
+[workspace.lints.clippy]
+# ── Baseline coverage (from lang-rust.md) ───────────────────────
+cargo = { level = "warn", priority = -1 }
+# Broad coverage; per-lint overrides below win
+pedantic = { level = "warn", priority = -1 }
+# Feature modules + re-exports make this noisy
+module_name_repetitions = "allow"
+# You use #[must_use] intentionally, not everywhere
+must_use_candidate = "allow"
+# Reduce doc-noise; rely on clear types + thiserror
+missing_errors_doc = "allow"
+# You deny panics anyway (below)
+missing_panics_doc = "allow"
+
+# ── String & borrowing conventions (lang-rust.md) ───────────────
+# Prefer &str over &String; &[T] over &Vec<T] for parameters
+ptr_arg = "warn"
+# Forces writeln!() over write!(...\n)
+write_with_newline = "deny"
+
+# ── 1) Explicit Errors as Data (Clean Code + lang-rust.md) ─────
+# No unwrap() in non-test code; use ? / explicit handling
+unwrap_used = "deny"
+# No expect() in non-test code
+expect_used = "deny"
+# Panics are not an error strategy in app/library code
+panic = "deny"
+# Avoid mixing Result-returning APIs with panics
+panic_in_result_fn = "deny"
+# Fallible conversions must be TryFrom/TryInto
+fallible_impl_from = "deny"
+
+# No Err(_) catch-alls; preserve exhaustiveness of error unions
+match_wild_err_arm = "deny"
+
+# ── 2) Strategic FP: reduce “accidental complexity” ────────────
+# Encourage guard clauses (early return) on Option/Result
+manual_let_else = "warn"
+# Prefer filter_map when filter+map together
+manual_filter_map = "warn"
+# Similar: avoid find().map(...) patterns when clearer
+manual_find_map = "warn"
+# “collect once” / avoid intermediate collections
+needless_collect = "warn"
+# Point-free when it improves clarity
+redundant_closure_for_method_calls = "warn"
+# Forces Display impl instead of ad-hoc to_string() method
+inherent_to_string = "deny"
+
+# ── 3) Cloning / copying hygiene ─────────────────
+# Encourages Copy when appropriate (small newtypes/enums)
+cloned_instead_of_copied = "warn"
+
+# ── 4) Match/import hygiene ─────────────────────────────────────
+# Discourage hiding new enum variants with _
+match_wildcard_for_single_variants = "warn"
+# Avoid glob-importing enums into scope
+enum_glob_use = "deny"
+
+# ── 5) Imperative shell hygiene ─────────────────────
+# Like no-debugger: don’t ship dbg!()
+dbg_macro = "deny"
+# Prefer structured logging/tracing (CLI may still print)
+print_stdout = "warn"
+print_stderr = "warn"
+
+# Keep TODOs visible (ideally with ticket refs)
+todo = "warn"
+# Helps keep error enums / unions efficient
+large_enum_variant = "warn"
+
+# ── Agent-safety: suppress lints whose fix suggestions push OOP ──
+# Fix adds Default impl boilerplate on validated newtypes
+new_without_default = "allow"
+# Fix restructures free functions into &self/&mut self methods
+wrong_self_convention = "allow"
+# Fix adds trait impls (From, Add, etc.) you didn't ask for
+should_implement_trait = "allow"

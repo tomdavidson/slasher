@@ -25,31 +25,21 @@
     "module.sortExportDeclarations": "caseInsensitive"
   },
   "json": {
-    "indentWidth": 2,
-    "trailingCommas": "never"
-  },
-  "markdown": {
     "lineWidth": 100,
-    "textWrap": "always"
+    "indentWidth": 2,
+    "trailingCommas": "never",
+    "preferSingleLine": true
   },
+  "markdown": { "lineWidth": 100, "textWrap": "always" },
   "toml": {},
   "yaml": {},
   "exec": {
     "cwd": "${configDir}",
     "commands": [
-      {
-        "command": "rustfmt --edition 2024",
-        "exts": [
-          "rs"
-        ]
-      }
+      { "command": "rustup run nightly rustfmt --edition 2024", "exts": ["rs"], "stdin": true }
     ]
   },
-  "excludes": [
-    "**/*-lock.json",
-    "**/dist",
-    "**/coverage"
-  ],
+  "excludes": ["**/*-lock.json", "**/dist", "**/coverage"],
   "plugins": [
     "https://plugins.dprint.dev/typescript-0.95.8.wasm",
     "https://plugins.dprint.dev/json-0.20.0.wasm",
