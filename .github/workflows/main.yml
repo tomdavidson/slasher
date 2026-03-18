@@ -1,12 +1,12 @@
-name: Pull Request Pipeline
+name: Trunk Pipeline
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
 
 concurrency:
-  group: pr-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  group: trunk-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   config:
@@ -32,10 +32,9 @@ jobs:
       fail-fast: true
       matrix:
         shard: ${{ fromJson(needs.config.outputs.ci-matrix) }}
+
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/moon-ci
         with:
@@ -47,8 +46,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: ./.github/actions/setup
       - name: Run Moon Audit Tasks (OSV, Cargo, Gitleaks)
         run: moon run :audit
@@ -97,27 +94,15 @@ jobs:
           sarif_file: semgrep.sarif
           category: semgrep
 
-  # Review App & Artifacts (RAA)
-  review-open:
-    name: Review Build
-    if: contains(github.event.pull_request.labels.*.name, 'review-app')
+  release-please:
+    name: Release Please
+    needs: [ci, audit, codeql, semgrep]
     runs-on: ubuntu-latest
-    needs: [ci]
     permissions:
-      deployments: write
+      contents: write
+      pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: googleapis/release-please-action@v4
         with:
-          fetch-depth: 0
-      - uses: ./.github/actions/setup
-
-      - id: raa
-        uses: ./.github/actions/moon-raa
-        with:
-          command: run
-          pr-number: ${{ github.event.pull_request.number }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Summary
-        if: always()
-        run: echo '${{ steps.raa.outputs.summary }}' >> "$GITHUB_STEP_SUMMARY"
+          manifest-file: .release-please-manifest.json
+          config-file: release-please-config.json

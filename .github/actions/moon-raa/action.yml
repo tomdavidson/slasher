@@ -1,0 +1,57 @@
+name: "moon-raa"
+description: "Manage review apps and artifacts for a Moon monorepo"
+
+inputs:
+  command:
+    required: true
+    description: "'run' or 'rm'"
+  pr-number:
+    required: true
+    description: "PR number"
+  prefix:
+    required: false
+    default: "raa"
+    description: "Environment name prefix (prepended to '-pr-{number}')"
+  github-token:
+    required: true
+    description: "GITHUB_TOKEN"
+
+outputs:
+  deployment-id:
+    description: "GitHub Deployment ID (run only)"
+    value: ${{ steps.raa.outputs.deployment-id }}
+  environment:
+    description: "Environment name"
+    value: ${{ steps.raa.outputs.environment }}
+  project-count:
+    description: "Number of projects processed"
+    value: ${{ steps.raa.outputs.project-count }}
+  summary:
+    description: "Markdown summary for GITHUB_STEP_SUMMARY"
+    value: ${{ steps.raa.outputs.summary }}
+  manifest:
+    description: "Full payload as JSON"
+    value: ${{ steps.raa.outputs.manifest }}
+  clean:
+    description: "true if rm completed without warnings (rm only)"
+    value: ${{ steps.raa.outputs.clean }}
+
+runs:
+  using: composite
+  steps:
+    - name: moon-raa
+      id: raa
+      uses: actions/github-script@v7
+      env:
+        INPUT_COMMAND: ${{ inputs.command }}
+        INPUT_PR_NUMBER: ${{ inputs.pr-number }}
+        INPUT_PREFIX: ${{ inputs.prefix }}
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const cmd = process.env.INPUT_COMMAND;
+          const handler = require(`${{ github.action_path }}/${cmd}.js`);
+          await handler({ github, context, core, exec, inputs: {
+            pr_number: process.env.INPUT_PR_NUMBER,
+            prefix: process.env.INPUT_PREFIX,
+          }});
