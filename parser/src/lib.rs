@@ -1,5 +1,5 @@
 mod application;
-pub mod domain;
+mod domain;
 
-// Public API re-export
-pub use application::parse_document;
+// Public API re-exports — restored as refactor completes
+// pub use application::parse_document;
