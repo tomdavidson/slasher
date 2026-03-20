@@ -1,1 +1,2 @@
-dprint = "^0.52.0"
+[plugins.tools]
+dprint = "https://raw.githubusercontent.com/Phault/proto-toml-plugins/main/dprint/plugin.toml"
