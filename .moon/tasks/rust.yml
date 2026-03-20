@@ -76,7 +76,7 @@ tasks:
       - "@group(sources)"
     env: *env
 
-  audi:
+  audit:
     command: "cargo"
     args: ["deny", "check"]
     inputs:

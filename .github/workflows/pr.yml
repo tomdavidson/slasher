@@ -51,7 +51,7 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup
       - name: Run Moon Audit Tasks (OSV, Cargo, Gitleaks)
-        run: moon run :audit
+        run: moon run :audit --affected
 
   codeql:
     name: CodeQL
