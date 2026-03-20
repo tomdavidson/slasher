@@ -26,7 +26,7 @@ jobs:
   ci:
     name: Moon CI
     needs: [config]
-    if: needs.config.outputs.runner-count > 0
+    if: fromJson(needs.config.outputs.runner-count) > 0
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
