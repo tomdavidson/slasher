@@ -1,0 +1,123 @@
+name: Pull Request Pipeline
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  config:
+    name: CI Strategy
+    runs-on: ubuntu-latest
+    outputs:
+      ci-matrix: ${{ steps.ci-matrix.outputs.matrix }}
+      runner-count: ${{ steps.ci-matrix.outputs.count }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - id: ci-matrix
+        uses: ./.github/actions/moon-ci-matrix
+
+  ci:
+    name: Moon CI
+    needs: [config]
+    if: needs.config.outputs.runner-count > 0
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        shard: ${{ fromJson(needs.config.outputs.ci-matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/moon-ci
+        with:
+          access-token: ${{ secrets.GITHUB_TOKEN }}
+
+  audit:
+    name: Audit & SCA
+    needs: [ci]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - name: Run Moon Audit Tasks (OSV, Cargo, Gitleaks)
+        run: moon run :audit
+
+  codeql:
+    name: CodeQL
+    needs: [ci]
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          cache-cargo: "false"
+          cache-pnpm: "false"
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+      - uses: github/codeql-action/autobuild@v3
+      - uses: github/codeql-action/analyze@v3
+
+  semgrep:
+    name: Semgrep
+    needs: [ci]
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    container:
+      image: returntocorp/semgrep
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Semgrep scan
+        run: |
+          semgrep ci \
+            --sarif --output=semgrep.sarif \
+            --config="p/default" \
+            --config="p/security-audit" \
+            --config="p/secrets"
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+
+  # Review App & Artifacts (RAA)
+  review-open:
+    name: Review Build
+    if: contains(github.event.pull_request.labels.*.name, 'review-app')
+    runs-on: ubuntu-latest
+    needs: [ci]
+    permissions:
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+
+      - id: raa
+        uses: ./.github/actions/moon-raa
+        with:
+          command: run
+          pr-number: ${{ github.event.pull_request.number }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        if: always()
+        run: echo '${{ steps.raa.outputs.summary }}' >> "$GITHUB_STEP_SUMMARY"

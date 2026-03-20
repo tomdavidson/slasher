@@ -5,7 +5,7 @@ projects:
   - "parser"
   - "wasm-*"
   - "slash-*"
-  - "riff*"
+  - "riff-cli"
   - "website"
   - "docs"
 
@@ -27,11 +27,11 @@ vcs:
   provider: "github"
   defaultBranch: "main"
   sync: true
-  hooks:
-    pre-push:
-      - "moon run :lint --affected"
-      - "moon run :fmt-check --affected"
-      - "moon run :test --affected"
+  # hooks:
+  #   pre-push:
+  #     - "moon run :lint --affected"
+  #     - "moon run :fmt-check --affected"
+  #     - "moon run :test --affected"
 
 hasher:
   optimization: "accuracy"

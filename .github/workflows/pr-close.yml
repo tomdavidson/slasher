@@ -1,0 +1,26 @@
+name: PR Review Teardown
+
+on:
+  pull_request_target:
+    types: [closed]
+
+jobs:
+  teardown:
+    name: Review Teardown
+    runs-on: ubuntu-latest
+    permissions:
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      - id: raa
+        uses: ./.github/actions/moon-raa
+        with:
+          command: rm
+          pr-number: ${{ github.event.pull_request.number }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        if: always()
+        run: echo '${{ steps.raa.outputs.summary }}' >> "$GITHUB_STEP_SUMMARY"

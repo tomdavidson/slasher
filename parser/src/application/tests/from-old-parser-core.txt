@@ -1,0 +1,157 @@
+2) Tests that belong in parser/src/application/test/
+
+These involve more than just a single command accumulator, but still live entirely in the application layer (no JSON IO, no external boundaries). They should call parse_document and assert on ParseResult:
+
+    Single-line command structure:
+
+        single_line_simple_command_parses_name
+
+        single_line_simple_command_parses_header
+
+        single_line_simple_command_has_single_line_mode
+
+        single_line_simple_command_payload_matches_header
+
+        single_line_command_with_no_args_has_empty_header
+
+        single_line_command_with_complex_args
+
+    Command name validation (ties into line_classify and overall parsing):
+
+        command_name_with_hyphens_parses
+
+        command_name_with_digits_parses
+
+        command_starting_with_digit_is_not_command
+
+        command_starting_with_uppercase_is_not_command
+
+        slash_alone_is_not_command
+
+    Leading whitespace and CRLF normalization:
+
+        leading_spaces_before_slash_are_ignored_for_detection
+
+        leading_tabs_before_slash_are_ignored_for_detection
+
+        crlf_normalized_to_lf
+
+    Multiple commands and IDs (needs ID generation + state machine):
+
+        two_single_line_commands_parsed
+
+        multiple_commands_have_sequential_ids
+
+    Commands interspersed with text and text block ranges:
+
+        commands_interspersed_with_text
+
+        text_before_command_captured
+
+        text_after_command_captured
+
+        text_block_range_is_correct
+
+        only_text_produces_no_commands
+
+        empty_input_produces_empty_result
+
+    Raw field on Command:
+
+        raw_single_line_is_trimmed_line
+
+        raw_continuation_includes_all_lines
+
+        raw_fence_includes_opener_and_closer
+
+These need the full DocumentParser behavior, so they’re best as application-layer tests, not unit tests for a single helper.
+
+
+Move these ones to higher layers instead of command_accumulate.rs:
+
+    crlf_continuation_works → document-level parsing test.
+
+    multiple_spaces_before_slash_in_continuation → document-level parsing test.
+
+    EOF “finalizes command” aspects → command_finalize tests (for warnings and final payload), not PendingCommand.
+
+Do you want me to sketch one or two co
+
+
+
+
+
+
+
+
+
+Scope for application/test/ (parse_document-level)
+
+Tests that use the application layer only (no JSON, no transport) and assert on ParseResult:
+
+    Single-line commands:
+
+        single_line_simple_command_parses_name
+
+        single_line_simple_command_parses_header
+
+        single_line_simple_command_has_single_line_mode
+
+        single_line_simple_command_payload_matches_header
+
+        single_line_command_with_no_args_has_empty_header
+
+        single_line_command_with_complex_args
+
+    Command name validation:
+
+        command_name_with_hyphens_parses
+
+        command_name_with_digits_parses
+
+        command_starting_with_digit_is_not_command
+
+        command_starting_with_uppercase_is_not_command
+
+        slash_alone_is_not_command
+
+    Leading whitespace and CRLF normalization:
+
+        leading_spaces_before_slash_are_ignored_for_detection
+
+        leading_tabs_before_slash_are_ignored_for_detection
+
+        crlf_normalized_to_lf
+
+        crlf_continuation_works (as an overall behavior of parse_document)
+
+    Multiple commands and IDs:
+
+        two_single_line_commands_parsed
+
+        multiple_commands_have_sequential_ids
+        (you’ll adapt this to whatever your new ID scheme is)
+
+    Text blocks:
+
+        commands_interspersed_with_text
+
+        text_before_command_captured
+
+        text_after_command_captured
+
+        text_block_range_is_correct
+
+        only_text_produces_no_commands
+
+        empty_input_produces_empty_result
+
+    Raw field if you decide raw is assembled at the application layer:
+
+        raw_single_line_is_trimmed_line
+
+        raw_continuation_includes_all_lines
+
+        raw_fence_includes_opener_and_closer
+
+These belong under something like parser/src/application/test/mod.rs calling parse_document.

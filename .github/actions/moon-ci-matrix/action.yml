@@ -1,0 +1,40 @@
+name: "Moon CI Runner Matrix"
+description: "Calculates optimal runner count from affected Moon tasks"
+
+inputs:
+  tasks-per-runner:
+    required: false
+    default: "3"
+    description: "Number of affected tasks to assign per runner"
+  max-parallel:
+    required: false
+    default: "6"
+    description: "Maximum number of concurrent runners"
+
+outputs:
+  matrix:
+    description: "JSON array of shard indices, e.g. [0, 1, 2]"
+    value: ${{ steps.calc.outputs.matrix }}
+  count:
+    description: "Total number of runners"
+    value: ${{ steps.calc.outputs.total }}
+
+runs:
+  using: composite
+  steps:
+    - id: calc
+      shell: bash
+      run: |
+        TASKS_PER_RUNNER=${{ inputs.tasks-per-runner }}
+        MAX_RUNNERS=${{ inputs.max-parallel }}
+
+        TASK_COUNT=$(moon query tasks --affected | jq '[.tasks[][] | select(.options.runInCI != false)] | length')
+
+        WANTED=$(( (TASK_COUNT + TASKS_PER_RUNNER - 1) / TASKS_PER_RUNNER ))
+        TOTAL=$(( WANTED > MAX_RUNNERS ? MAX_RUNNERS : WANTED ))
+
+        MATRIX_JSON=$(jq -n -c --argjson n "$TOTAL" '[range($n)]')
+
+        echo "Affected CI tasks: $TASK_COUNT, Runners: $TOTAL"
+        echo "count=$TOTAL" >> $GITHUB_OUTPUT
+        echo "matrix=$MATRIX_JSON" >> $GITHUB_OUTPUT

@@ -1,0 +1,51 @@
+# .github/actions/moon-run/action.yml
+#
+# Usage (affected against remote):
+#   - uses: ./.github/actions/moon-run
+#     with:
+#       task: ":lint"
+#       affected: "remote"
+#
+# Usage (no affected, exact task):
+#   - uses: ./.github/actions/moon-run
+#     with:
+#       task: "slash-rust:publish"
+#
+# Usage (multiple tasks):
+#   - uses: ./.github/actions/moon-run
+#     with:
+#       task: ":lint :test :fmt-check"
+#       affected: "remote"
+
+name: "Moon Run"
+description: "Run a moon task with standard defaults and retrospect"
+
+inputs:
+  task:
+    required: true
+    description: "Moon task(s) to run (e.g., ':lint' or 'riff-cli:publish')"
+  affected:
+    required: false
+    default: ""
+    description: "'remote' = compare against remote tracking branch, 'true' = compare against default branch, '' = no affected filtering"
+
+runs:
+  using: composite
+  steps:
+    - name: Moon Run
+      shell: bash
+      run: |
+        affected_flag=""
+        if [ "${{ inputs.affected }}" = "remote" ]; then
+          affected_flag="--affected remote"
+        elif [ "${{ inputs.affected }}" = "true" ]; then
+          affected_flag="--affected"
+        fi
+        moon run --color ${{ inputs.task }} $affected_flag
+
+    - uses: appthrust/moon-ci-retrospect@v1
+      if: success() || failure()
+
+    - run: echo "${{ steps.raa.outputs.summary }}" >> $GITHUB_STEP_SUMMARY
+      shell: bash
+      if: always()

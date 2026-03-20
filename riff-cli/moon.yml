@@ -1,9 +1,43 @@
-# $schema: https://moonrepo.dev/schemas/project.json
+$schema: "https://moonrepo.dev/schemas/project.json"
+id: "riff-cli"
+language: "rust"
 
-language: "unknown"
-
-tags: ["core"]
+tags: ["cli"]
 
 workspace:
   inheritedTasks:
     include: []
+
+
+# tasks:
+#   publish:
+#     command: "goreleaser"
+#     args: ["release", "--clean", "--config", "riff-cli/.goreleaser.yaml"]
+#     options:
+#       runInCI: false
+
+# tasks:
+#   docker-login:
+#     # We only need to log in if GITHUB_TOKEN is present (i.e. in CI)
+#     script: |
+#       if [ -n "$GITHUB_TOKEN" ]; then
+#         echo "$GITHUB_TOKEN" | docker login ghcr.io -u tomdavidson --password-stdin
+#       else
+#         echo "No GITHUB_TOKEN found, skipping docker login."
+#       fi
+#     local: true
+
+#   publish:
+#     command: 'goreleaser release --clean'
+#     local: true
+#     deps:
+#       - 'docker-login'
+#       - 'parser:build' # Ensure the engine is compiled first
+
+#   review:
+#     command: 'goreleaser release --clean --snapshot'
+#     local: true
+#     # We don't depend on docker-login here, because snapshots don't push to GHCR!
+#     deps:
+#       - 'parser:build'
+

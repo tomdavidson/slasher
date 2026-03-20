@@ -1,0 +1,42 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "packageRules": [
+    {
+      "matchManagers": [
+        "cargo"
+      ],
+      "groupName": "rust dependencies"
+    },
+    {
+      "matchManagers": [
+        "pnpm"
+      ],
+      "groupName": "pnpm dependencies"
+    },
+    {
+      "matchManagers": [
+        "pip_requirements",
+        "poetry"
+      ],
+      "groupName": "python dependencies"
+    },
+    {
+      "matchManagers": [
+        "gomod"
+      ],
+      "groupName": "go dependencies"
+    },
+    {
+      "matchManagers": [
+        "github-actions"
+      ],
+      "groupName": "github actions"
+    }
+  ]
+}

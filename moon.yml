@@ -1,0 +1,25 @@
+$schema: "https://moonrepo.dev/schemas/project.json"
+
+tags:
+  - "tooling"
+
+tasks:
+  fmt:
+    script: "rustup toolchain install nightly --component rustfmt -q && dprint fmt"
+    inputs:
+      - "**/*.rs"
+      - "**/*.toml"
+      - "**/*.yml"
+      - "**/*.yaml"
+      - "dprint.json"
+    options:
+      runInCI: false
+
+  fmt-check:
+    script: "rustup toolchain install nightly --component rustfmt -q && dprint check"
+    inputs:
+      - "**/*.rs"
+      - "**/*.toml"
+      - "**/*.yml"
+      - "**/*.yaml"
+      - "dprint.json"

@@ -1,0 +1,17 @@
+[package]
+name = "parser-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Slash command parser core — pure Rust, no WASM dependencies"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+proptest = "1.4"
+proptest-derive = "0.8"
+rand = "^0.10"

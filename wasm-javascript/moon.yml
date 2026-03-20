@@ -1,9 +1,4 @@
-# $schema: https://moonrepo.dev/schemas/project.json
-
-language: "unknown"
-
-tags: ["core"]
-
-workspace:
-  inheritedTasks:
-    include: []
+$schema: "https://moonrepo.dev/schemas/project.json"
+language: "rust"
+type: "library"
+tags: ["wasm"]

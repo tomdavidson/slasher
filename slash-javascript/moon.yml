@@ -1,9 +1,11 @@
-# $schema: https://moonrepo.dev/schemas/project.json
+$schema: "https://moonrepo.dev/schemas/project.json"
+language: "typescript"
+type: "library"
+tags: ["sdk", "npm"]
 
-language: "unknown"
-
-tags: ["core"]
-
-workspace:
-  inheritedTasks:
-    include: []
+tasks:
+  publish:
+    command: "pnpm"
+    args: ["publish", "--access", "public", "--no-git-checks"]
+    options:
+      runInCI: false

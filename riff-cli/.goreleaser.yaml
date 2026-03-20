@@ -1,0 +1,101 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+project_name: riff
+
+release:
+  mode: keep-existing
+  github:
+    owner: tomdavidson
+    name: slasher
+
+changelog:
+  disable: true
+
+before:
+  hooks:
+    - rustup default stable
+    - cargo install --locked cargo-zigbuild
+
+builds:
+  - id: riff
+    builder: rust
+    dir: riff-cli
+    targets:
+      - x86_64-unknown-linux-gnu
+      - aarch64-unknown-linux-gnu
+      - x86_64-apple-darwin
+      - aarch64-apple-darwin
+    env:
+      - RUSTFLAGS=-C target-feature=+crt-static
+
+archives:
+  - id: riff-archives
+    builds:
+      - riff
+    format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE*
+      - README*
+
+nfpms:
+  - id: riff-nfpms
+    package_name: riff
+    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - deb
+      - rpm
+      - apk
+    builds:
+      - riff
+    maintainer: "Tom Davidson <tom@tomdavidson.org>"
+    description: "Slasher riff CLI — slash command parser"
+    license: MIT
+    homepage: "https://github.com/tomdavidson/slasher"
+
+brews:
+  - name: riff
+    ids:
+      - riff-archives
+    repository:
+      owner: tomdavidson
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/tomdavidson/slasher"
+    description: "Slasher riff CLI — slash command parser"
+    license: MIT
+
+dockers:
+  - image_templates:
+      - "ghcr.io/tomdavidson/riff:{{ .Version }}-amd64"
+    use: buildx
+    goos: linux
+    goarch: amd64
+    dockerfile: riff-cli/Dockerfile
+    build_flag_templates:
+      - "--platform=linux/amd64"
+  - image_templates:
+      - "ghcr.io/tomdavidson/riff:{{ .Version }}-arm64"
+    use: buildx
+    goos: linux
+    goarch: arm64
+    dockerfile: riff-cli/Dockerfile
+    build_flag_templates:
+      - "--platform=linux/arm64"
+
+docker_manifests:
+  - name_template: "ghcr.io/tomdavidson/riff:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/tomdavidson/riff:{{ .Version }}-amd64"
+      - "ghcr.io/tomdavidson/riff:{{ .Version }}-arm64"
+  - name_template: "ghcr.io/tomdavidson/riff:latest"
+    image_templates:
+      - "ghcr.io/tomdavidson/riff:{{ .Version }}-amd64"
+      - "ghcr.io/tomdavidson/riff:{{ .Version }}-arm64"
+
+checksum:
+  name_template: "{{ .ProjectName }}_checksums.txt"
+
+dist: dist

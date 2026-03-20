@@ -1,0 +1,102 @@
+name: Publish Distribution
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: "What to publish/review"
+        required: true
+        type: choice
+        options:
+          - affected
+          - all
+      snapshot:
+        description: "Run as a snapshot build (no registry publish)"
+        required: true
+        type: boolean
+        default: true
+
+jobs:
+  # ---------------------------------------------------------
+  # 1. Routing Job: Determine Task & Environment
+  # ---------------------------------------------------------
+  router:
+    name: Determine Target
+    runs-on: ubuntu-latest
+    outputs:
+      task: ${{ steps.parse.outputs.task }}
+      target: ${{ steps.parse.outputs.target }}
+      environment: ${{ steps.parse.outputs.environment }}
+    steps:
+      - id: parse
+        run: |
+          # Default values for Workflow Dispatch (Manual Trigger)
+          TASK="publish"
+          TARGET=""
+          ENV=""
+
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            if [ "${{ inputs.snapshot }}" == "true" ]; then
+               TASK="review"
+            fi
+
+            if [ "${{ inputs.scope }}" == "affected" ]; then
+               TARGET=":$TASK --affected"
+            else
+               TARGET=":$TASK"
+            fi
+          fi
+
+          # If triggered by an actual GitHub Release event
+          if [ "${{ github.event_name }}" == "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+            COMP=$(echo "$TAG" | sed -E 's/-v[0-9].*//')
+
+            # Check if this is a pre-release (review app)
+            if [ "${{ github.event.release.prerelease }}" == "true" ]; then
+               TASK="review"
+               ENV="" # No manual gate needed for review
+            else
+               TASK="publish"
+               ENV="release" # Require production manual approval
+            fi
+
+            TARGET="$COMP:$TASK"
+          fi
+
+          echo "task=$TASK" >> $GITHUB_OUTPUT
+          echo "target=$TARGET" >> $GITHUB_OUTPUT
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+
+  publish:
+    name: Moon Run ${{ needs.router.outputs.target }}
+    needs: router
+    runs-on: ubuntu-latest
+    environment: ${{ needs.router.outputs.environment }}
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+
+      - name: Execute Moon Task
+        run: moon run ${{ needs.router.outputs.target }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+
+      - name: Attach standalone artifacts to release
+        if: github.event_name == 'release'
+        run: |
+          if [ -d dist/ ]; then
+            gh release upload "${{ github.event.release.tag_name }}" dist/* --clobber
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,61 @@
+# .github/actions/setup/action.yml
+#
+# Usage:
+#   - uses: ./.github/actions/setup
+#     with:
+#       cache-cargo: "true"
+#       cache-pnpm: "flase"
+#
+# Usage (minimal, no project caches):
+#   - uses: ./.github/actions/setup
+
+name: "Setup"
+description: "Checkout, setup Moon/proto (lazy install), restore caches"
+
+inputs:
+  fetch-depth:
+    default: "0"
+    description: "Git fetch depth (0 for full history, needed for moon ci affected detection)"
+  cache-cargo:
+    default: "true"
+    description: "Restore Cargo registry, git, and target caches"
+  cache-pnpm:
+    default: "true"
+    description: "Restore pnpm store cache"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: ${{ inputs.fetch-depth }}
+
+    - uses: moonrepo/setup-toolchain@v0
+      with:
+        auto-install: true
+
+    - uses: actions/cache@v4
+      with:
+        path: .moon/cache
+        key: moon-${{ runner.os }}-${{ hashFiles('.moon/workspace.yml', '.moon/tasks/*.yml', '.moon/toolchains.yml') }}
+        restore-keys: |
+          moon-${{ runner.os }}-
+
+    - uses: actions/cache@v4
+      if: inputs.cache-cargo == 'true'
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          cargo-${{ runner.os }}-
+
+    - uses: actions/cache@v4
+      if: inputs.cache-pnpm == 'true'
+      with:
+        path: ~/.local/share/pnpm/store
+        key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          pnpm-${{ runner.os }}-

@@ -1,0 +1,51 @@
+3) Tests that cross application ⇄ infrastructure boundaries
+
+These belong in parser/src/test/ (or an integration-test style place) because they talk about JSON serialization or full result shape across layers:
+
+    Version and context plumbing:
+
+        result_version_is_0_1_0
+
+        context_fields_pass_through
+
+    JSON output shape:
+
+        parse_slash_commands_returns_valid_json
+
+        json_mode_field_is_single_line_string
+
+        json_mode_field_is_continuation_string
+
+        json_mode_field_is_fence_string
+
+These will be driven by your new infrastructure adapter (whatever replaces parse_slash_commands).
+
+
+
+
+
+
+
+
+
+Scope for parser/test/ (crossing into infrastructure)
+
+Tests that involve JSON output or full result shape across layers:
+
+    Version and context:
+
+        result_version_is_0_1_0
+
+        context_fields_pass_through
+
+    JSON shape / mode field:
+
+        parse_slash_commands_returns_valid_json
+
+        json_mode_field_is_single_line_string
+
+        json_mode_field_is_continuation_string
+
+        json_mode_field_is_fence_string
+
+These will move to parser/tests/ and exercise your new “parse → JSON” adapter, not the application module directly.
