@@ -104,6 +104,20 @@ jobs:
   #         sarif_file: semgrep.sarif
   #         category: semgrep
 
+  gate:
+    name: PR Gate
+    if: always()
+    needs: [ci, audit, codeql]
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          if [[ "${{ needs.ci.result }}" == "failure" || \
+                "${{ needs.audit.result }}" == "failure" || \
+                "${{ needs.codeql.result }}" == "failure" ]]; then
+            exit 1
+          fi
+        shell: bash
+
   # Review App & Artifacts (RAA)
   review-open:
     name: Review Build
