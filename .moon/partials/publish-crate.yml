@@ -1,0 +1,23 @@
+tasks:
+  publish:
+    command: cargo
+    args:
+      - publish
+      - --token
+      - $CARGO_REGISTRY_TOKEN
+    inputs:
+      - src/**/*.rs
+      - Cargo.toml
+      - Cargo.lock
+    options:
+      persistent: false
+
+  review:
+    command: cargo
+    args:
+      - publish
+      - --dry-run
+    inputs:
+      - src/**/*.rs
+      - Cargo.toml
+      - Cargo.lock

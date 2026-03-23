@@ -1,13 +1,13 @@
 $schema: "https://moonrepo.dev/schemas/workspace.json"
 
 projects:
-  - "wit"
-  - "parser"
-  - "wasm-*"
-  - "slash-*"
-  - "riff-cli"
-  - "website"
-  - "docs"
+  - "engine"
+  # - "wit"
+  # - "wasm-*"
+  # - "slash-*"
+  # - "riff-cli"
+  # - "website"
+  # - "docs"
 
 constraints:
   enforceLayerRelationships: true
