@@ -1,0 +1,931 @@
+
+
+
+
+Davidson                                                        [Page 1]
+
+Slash Command Syntax                                        March 2026
+
+
+                      Slash Command Syntax 1.1.0
+
+Abstract
+
+   This document defines the syntax for slash commands embedded in
+   UTF-8 text.  It specifies how a conforming parser partitions an
+   input string into an ordered sequence of commands and text blocks.
+
+   The specification is format-agnostic.  It defines observable
+   input-to-output behavior without prescribing internal architecture,
+   serialization format, or host binding conventions.
+
+Status of This Memo
+
+   This document is an independent submission and is not the product of
+   any standards body.  Distribution of this memo is unlimited.
+
+Copyright Notice
+
+   Copyright (c) 2026 Tom D. Davidson.  All rights reserved.
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . .  2
+   2.  Conventions and Definitions . . . . . . . . . . . . . . . .  3
+   3.  Input Model . . . . . . . . . . . . . . . . . . . . . . . .  3
+     3.1.  Line Ending Normalization . . . . . . . . . . . . . . .  3
+     3.2.  Line Joining  . . . . . . . . . . . . . . . . . . . . .  4
+     3.3.  Logical Lines . . . . . . . . . . . . . . . . . . . . .  5
+   4.  Syntax Elements . . . . . . . . . . . . . . . . . . . . . .  6
+     4.1.  Command Name  . . . . . . . . . . . . . . . . . . . . .  6
+     4.2.  Command Line  . . . . . . . . . . . . . . . . . . . . .  6
+     4.3.  Arguments . . . . . . . . . . . . . . . . . . . . . . .  7
+     4.4.  The Header  . . . . . . . . . . . . . . . . . . . . . .  7
+     4.5.  Invalid Slash Lines . . . . . . . . . . . . . . . . . .  7
+   5.  Argument Modes  . . . . . . . . . . . . . . . . . . . . . .  8
+     5.1.  Single-Line Mode  . . . . . . . . . . . . . . . . . . .  8
+     5.2.  Fence Mode  . . . . . . . . . . . . . . . . . . . . . .  8
+       5.2.1.  Fence Opener  . . . . . . . . . . . . . . . . . . .  8
+       5.2.2.  Fence Body  . . . . . . . . . . . . . . . . . . . .  9
+       5.2.3.  Fence Closer  . . . . . . . . . . . . . . . . . . .  9
+       5.2.4.  Unclosed Fence  . . . . . . . . . . . . . . . . . . 10
+   6.  Document Partitioning . . . . . . . . . . . . . . . . . . . 10
+     6.1.  Fence Body Lines  . . . . . . . . . . . . . . . . . . . 10
+     6.2.  Command Lines . . . . . . . . . . . . . . . . . . . . . 10
+     6.3.  Text Lines  . . . . . . . . . . . . . . . . . . . . . . 10
+     6.4.  Text Blocks . . . . . . . . . . . . . . . . . . . . . . 11
+     6.5.  Ordering and Identification . . . . . . . . . . . . . . 11
+   7.  Output Requirements . . . . . . . . . . . . . . . . . . . . 11
+     7.1.  Per-Command Output  . . . . . . . . . . . . . . . . . . 11
+     7.2.  Per-Text-Block Output . . . . . . . . . . . . . . . . . 12
+     7.3.  Warnings  . . . . . . . . . . . . . . . . . . . . . . . 12
+     7.4.  Warning Types . . . . . . . . . . . . . . . . . . . . . 12
+   8.  Conformance . . . . . . . . . . . . . . . . . . . . . . . . 13
+     8.1.  Conformance Targets . . . . . . . . . . . . . . . . . . 13
+     8.2.  Parser Conformance  . . . . . . . . . . . . . . . . . . 13
+     8.3.  Roundtrip Fidelity Invariant  . . . . . . . . . . . . . 13
+     8.4.  Determinism . . . . . . . . . . . . . . . . . . . . . . 14
+   9.  Security Considerations . . . . . . . . . . . . . . . . . . 14
+   10. IANA Considerations . . . . . . . . . . . . . . . . . . . . 14
+   Appendix A.  Formal Syntax  . . . . . . . . . . . . . . . . . . 14
+   Appendix B.  Parsing Examples . . . . . . . . . . . . . . . . . 16
+   Appendix C.  Reference State Machine  . . . . . . . . . . . . . 19
+   Appendix D.  Change Log . . . . . . . . . . . . . . . . . . . . 20
+   Normative References  . . . . . . . . . . . . . . . . . . . . . 20
+   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . 21
+
+
+1.  Introduction
+
+   Slash commands are a lightweight convention for embedding executable
+   directives in plain text.  A line beginning with "/" followed by a
+   command name is treated as a command; all other lines are text.
+
+   This convention is used in chat applications, developer tooling,
+   and AI agent interfaces.  Despite its widespread adoption, no formal
+   syntax specification exists.  This document provides one.
+
+   The specification defines:
+
+   o  How input text is normalized and optionally joined across
+      physical lines.
+
+   o  How command lines are distinguished from text lines.
+
+   o  How command arguments are delimited, including an inline
+      single-line mode and a fenced multi-line mode using
+      backtick-delimited blocks.
+
+   o  How the input is partitioned into an ordered sequence of
+      commands and text blocks.
+
+   o  The minimum information a conforming parser must produce for
+      each element.
+
+   The specification does NOT define:
+
+   o  A serialization format for parser output.  Companion
+      specifications (such as a JSON schema) define concrete
+      output formats.
+
+   o  Internal parser architecture, state machines, memory
+      strategies, or pipeline stages.  Any implementation that
+      produces conforming output for all inputs is valid.
+
+   o  Interpretation of command arguments.  The parser treats all
+      argument content as opaque.
+
+
+2.  Conventions and Definitions
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL
+   NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED",
+   "MAY", and "OPTIONAL" in this document are to be interpreted as
+   described in BCP 14 [RFC2119] [RFC8174] when, and only when,
+   they appear in all capitals, as shown here.
+
+   The following terms are used throughout this document:
+
+   physical line:  A line in the normalized input, delimited by
+      U+000A (LF).
+
+   logical line:  One or more physical lines merged by backslash
+      continuation (Section 3.2).  A physical line that is not
+      joined with any other line is also a logical line.
+
+   command:  A logical line whose first non-whitespace content
+      matches the command trigger pattern (Section 4.2).
+
+   text block:  A maximal contiguous sequence of non-command, non-
+      fence-body logical lines.
+
+   payload:  The argument content of a command, assembled according
+      to its argument mode (Section 5).
+
+   fence body line:  A physical line that falls between an unmatched
+      fence opener and its corresponding closer or EOF.
+
+   header:  The inline, non-fenced argument portion of a command
+      line, serving as the dispatch or routing segment.
+
+
+3.  Input Model
+
+3.1.  Line Ending Normalization
+
+   Before any other processing, the input MUST be normalized as
+   follows:
+
+   1.  Replace all CRLF (U+000D U+000A) sequences with LF
+       (U+000A).
+
+   2.  Replace all remaining bare CR (U+000D) characters with LF
+       (U+000A).
+
+   After normalization, all line terminators are LF.  The normalized
+   input is split on LF to produce a sequence of physical lines.
+   Each LF terminates a line and is not part of the line content.
+   A trailing LF at the end of input produces a trailing empty line.
+
+   Literal escape sequences inside content (e.g., the two-character
+   sequence "\" "n" inside a JSON string) are ordinary characters,
+   not line terminators.  They MUST be preserved verbatim.
+
+3.2.  Line Joining (Backslash Continuation)
+
+   After normalization, logical lines are derived from physical
+   lines by the following joining rules.  This mechanism is
+   identical in behavior to POSIX shell backslash-newline removal.
+
+   For each physical line, if the line ends with U+005C (REVERSE
+   SOLIDUS, "\"):
+
+   1.  Remove the trailing reverse solidus.
+
+   2.  Remove the line boundary (the LF that delimits the physical
+       line).
+
+   3.  Concatenate the remainder directly with the next physical
+       line.  No separator character is inserted. This is true POSIX
+       backslash-newline removal.
+
+   4.  If the result still ends with "\", repeat from step 1 with
+       the subsequent physical line.
+
+   Lines that do not end with "\" are left unchanged.
+
+   The join marker is any "\" immediately before the line boundary,
+   regardless of what precedes it.
+
+   If the final physical line of the input ends with "\" and there
+   is no subsequent line to join with, the trailing "\" is removed
+   and the line stands alone.  This mirrors POSIX shell behavior.
+
+   Fence body lines (Section 5.2.2) are never subject to line
+   joining.  A trailing "\" inside a fence body is literal content.
+
+3.3.  Logical Lines
+
+   After joining, the parser operates on a sequence of logical
+   lines.  Each logical line maps to one or more physical lines
+   from the normalized input.
+
+   A conforming parser MUST track this mapping.  When output
+   elements reference line positions, those positions MUST be
+   zero-based physical line numbers from the normalized input
+   (before joining).
+
+
+4.  Syntax Elements
+
+4.1.  Command Name
+
+   A command name is a string matching the following pattern:
+
+      command-name = LCALPHA *((LCALPHA / DIGIT / "-") LCALPHA / DIGIT)
+
+   Where LCALPHA is %x61-7A (lowercase ASCII letters a-z) and
+   DIGIT is %x30-39.  A single lowercase letter is a valid
+   command name.  Multi-character names MUST NOT end with a
+   hyphen.
+
+   The formal ABNF is given in Appendix A.
+
+   In prose:
+
+   o  Begins with a lowercase ASCII letter.
+
+   o  Followed by zero or more lowercase ASCII letters, ASCII
+      digits, or hyphens.
+
+   o  MUST NOT end with a hyphen.  Hyphens are word separators
+      within multi-segment names (e.g., "call-tool"), not
+      trailing punctuation.
+
+4.2.  Command Line
+
+   A command line is a logical line whose first non-whitespace
+   character is U+002F (SOLIDUS, "/") and whose characters
+   immediately following the "/" form a valid command name
+   (Section 4.1).
+
+   The "/" MUST be immediately followed by the command name with
+   no intervening whitespace.
+
+4.3.  Arguments
+
+   Everything after the first whitespace character following the
+   command name is the arguments portion.  The whitespace between
+   the command name and the arguments is consumed as a separator
+   and is not included in the arguments string.
+
+   The arguments portion may be:
+
+   o  Empty (command with no arguments).
+
+   o  Inline text (single-line mode, Section 5.1).
+
+   o  A fence opener (fence mode, Section 5.2).
+
+   o  Inline text followed by a fence opener: the text before the
+      fence becomes the header, the fenced content becomes the
+      payload.
+
+4.4.  The Header
+
+   The header is the inline, non-fenced argument portion of the
+   command line.
+
+   o  In single-line mode, the header and payload are identical
+      (the full arguments text).
+
+   o  In fence mode, the header contains the arguments text that
+      appears before the fence opener on the command line.
+
+4.5.  Invalid Slash Lines
+
+   If a logical line's first non-whitespace character is "/" but the
+   text after "/" does not match the command name pattern, the line
+   is NOT a command.  Examples include a bare "/", "/123", "/Hello",
+   "/ space", and "/cmd-" (trailing hyphen).
+
+   Such lines are text lines and are handled per Section 6.3.
+
+
+5.  Argument Modes
+
+   Every command has exactly one of two argument modes, determined
+   at the point of detection.
+
+5.1.  Single-Line Mode
+
+   If the arguments portion does not contain a fence opener:
+
+   o  The full arguments text is both the header and the payload.
+
+   o  The argument mode is "single-line".
+
+   o  There is no fence language identifier.
+
+   o  The command is complete on its logical line.
+
+5.2.  Fence Mode
+
+   Fenced blocks attach a raw, multi-line payload to a command
+   using backtick-delimited block syntax.  Fenced payloads are
+   verbatim: no parsing rules (including line joining) apply to
+   fence body lines.
+
+   Only backtick (U+0060, "`") fences are recognized.  Tilde
+   (U+007E, "~") fences MUST NOT be treated as fence openers.
+
+5.2.1.  Fence Opener
+
+   In the arguments portion of a command line, the first occurrence
+   of three or more consecutive backtick characters is a fence
+   opener.
+
+   o  Text before the backtick run, trimmed of trailing whitespace,
+      becomes the header.
+
+   o  The backtick run length is recorded as the fence marker
+      length.
+
+   o  Text after the backtick run, trimmed of leading whitespace,
+      if non-empty and consisting of a single token (no internal
+      whitespace), is the fence language identifier.
+
+   The variable-length fence (three or more backticks) allows
+   content containing triple backticks to be fenced with four or
+   more backticks, avoiding collision.
+
+5.2.2.  Fence Body
+
+   Fence body lines are the physical lines (from the normalized
+   input, not joined logical lines) that fall between the fence
+   opener and the fence closer (or EOF).
+
+   All fence body lines MUST be included in the payload verbatim,
+   preserving their original content including any trailing
+   backslashes.  Lines are concatenated with LF (U+000A) separators
+   in the payload.  The payload MUST NOT include a trailing LF
+   after the last body line.
+
+   Fence body lines are never subject to line joining
+   (Section 3.2).  Inside a fence, all content is literal payload:
+   command triggers, invalid slash lines, blank lines, and any
+   other content.
+
+5.2.3.  Fence Closer
+
+   A physical line is a fence closer for a given fence opener if,
+   after trimming leading and trailing whitespace:
+
+   o  It consists solely of backtick (U+0060) characters.
+
+   o  The number of backticks is greater than or equal to the
+      opener's backtick count.
+
+   The fence closer line MUST NOT be included in the payload.
+
+   Line joining applies to physical lines outside fences.  If the
+   physical line containing a fence closer ends with a trailing
+   "\", the fence closes normally, and then the "\" triggers a
+   line join with the next physical line.  The joined result is
+   outside the fenced command.
+
+5.2.4.  Unclosed Fence
+
+   If the input ends before a fence closer is found:
+
+   o  The command is complete with whatever payload has been
+      accumulated through EOF.
+
+   o  A warning of type "unclosed_fence" MUST be produced,
+      identifying the fence opener's physical line number.
+
+
+6.  Document Partitioning
+
+   The input is partitioned into an ordered sequence of commands
+   and text blocks.  Every physical line in the normalized input
+   belongs to exactly one of the following categories.
+
+6.1.  Fence Body Lines
+
+   A fence body line is any physical line that follows an unmatched
+   fence opener (Section 5.2.1) and precedes the corresponding
+   fence closer (Section 5.2.3) or EOF.  Fence body lines are
+   consumed by the command that owns the fence.
+
+6.2.  Command Lines
+
+   A command line (Section 4.2) is any non-fence-body logical line
+   whose first non-whitespace content matches the command trigger
+   pattern.  In fence mode, the command also consumes the fence
+   opener line, all fence body lines, and the fence closer line
+   (if present).
+
+6.3.  Text Lines
+
+   A text line is any non-fence-body logical line that is not a
+   command line.  This includes blank lines, invalid slash lines
+   (Section 4.5), and lines containing arbitrary prose.
+
+6.4.  Text Blocks
+
+   Consecutive text lines form a single text block.
+
+   o  Blank lines within a text region are included in the text
+      block content.
+
+   o  Text block content preserves the original lines concatenated
+      with LF (U+000A) separators.
+
+   o  A new text block begins after a command is finalized, if
+      text lines follow.
+
+   Text blocks exist so that the roundtrip invariant (Section 8.3)
+   can be satisfied, and so that tooling can distinguish executable
+   content from commentary.
+
+6.5.  Ordering and Identification
+
+   Commands MUST be assigned sequential zero-based identifiers in
+   encounter order: "cmd-0", "cmd-1", "cmd-2", etc.
+
+   Text blocks MUST be assigned identifiers independently in the
+   same manner: "text-0", "text-1", "text-2", etc.
+
+   Commands and text blocks MUST appear in the output in document
+   order.
+
+
+7.  Output Requirements
+
+   This section defines the minimum information a conforming parser
+   MUST produce for each element, without prescribing a
+   serialization format.  Companion specifications define concrete
+   output schemas.
+
+7.1.  Per-Command Output
+
+   For each command, a conforming parser MUST produce:
+
+   identifier:  Sequential zero-based ID ("cmd-0", "cmd-1", ...).
+
+   name:  The command name without the leading "/".
+
+   raw source:  The exact source text from the normalized input
+      (before line joining).  For joined commands, this includes all
+      physical lines with their backslashes and LF separators.  For
+      fenced commands, this includes the opener line, all body
+      lines, and the closer line (if present).
+
+   line range:  The inclusive physical line range (zero-based) in
+      the normalized input.
+
+   header:  The inline argument text before any fence opener.
+
+   argument mode:  Either "single-line" or "fence".
+
+   fence language:  The language identifier from the fence opener,
+      or absent/null if not in fence mode or no language was
+      specified.
+
+   payload:  The assembled argument content.  In single-line mode,
+      identical to header.  In fence mode, the verbatim content
+      between the fence delimiters with lines joined by LF.
+
+7.2.  Per-Text-Block Output
+
+   For each text block, a conforming parser MUST produce:
+
+   identifier:  Sequential zero-based ID ("text-0", "text-1", ...).
+
+   line range:  The inclusive physical line range (zero-based) in
+      the normalized input.
+
+   content:  The original text with lines joined by LF separators.
+
+7.3.  Warnings
+
+   For each non-fatal issue, a conforming parser MUST produce:
+
+   warning type:  A category identifier string.
+
+   start line:  The physical line number where the issue originated.
+
+   message:  A human-readable description.
+
+7.4.  Warning Types
+
+   This specification defines the following warning type.
+   Implementations MAY define additional types.
+
+   +------------------+------------------------------------------+
+   | Type             | Condition                                |
+   +------------------+------------------------------------------+
+   | unclosed_fence   | EOF reached while inside a fenced block  |
+   +------------------+------------------------------------------+
+
+   The "unclosed_fence" warning MUST include the fence opener's
+   physical line number as the start line.
+
+
+8.  Conformance
+
+8.1.  Conformance Targets
+
+   This specification defines a single conformance target: a
+   "conforming parser".  A conforming parser is any software
+   component that accepts a UTF-8 string and produces output
+   satisfying the requirements in Sections 6 and 7.
+
+8.2.  Parser Conformance
+
+   A conforming parser:
+
+   1.  MUST correctly partition the input into commands and text
+       blocks as defined in Section 6.
+
+   2.  MUST produce the per-element output defined in Section 7.
+
+   3.  MUST treat all argument content as opaque.  A conforming
+       parser MUST NOT interpret, tokenize, or apply quoting,
+       escaping, or key-value semantics to the header or payload.
+
+   4.  MUST be a total function: it always produces a valid result
+       for any input.  An empty input produces a result with no
+       commands, no text blocks, and no warnings.  Malformed
+       constructs produce partial results and warnings, never a
+       failure.
+
+   5.  MUST NOT expose or require an abstract syntax tree as a
+       public artifact.
+
+   There are no requirements on internal architecture, memory
+   usage, number of passes, state representation, or pipeline
+   structure.  Any implementation that produces conforming output
+   for all inputs satisfies this specification.
+
+8.3.  Roundtrip Fidelity Invariant
+
+   Let P be a conforming parser and F be a formatter that generates
+   a canonical plaintext representation from P's output.  The
+   following invariant MUST hold:
+
+   For any valid input I, parsing, formatting, and parsing again
+   yields a structurally equivalent result:
+
+      P(F(P(I))) = P(I)
+
+   Structural equivalence means the same sequence of commands and
+   text blocks with identical values for: name, argument mode,
+   header, payload, fence language, and text block content.
+
+   The invariant is structural, not byte-for-byte: raw source
+   values, line numbers, and whitespace details MAY differ due to
+   normalization and line joining.
+
+8.4.  Determinism
+
+   A conforming parser MUST be deterministic: given identical input
+   bytes, the output MUST be identical across invocations and across
+   conforming implementations.
+
+
+9.  Security Considerations
+
+   This specification defines a syntax for detecting commands in
+   text.  It does not define command execution semantics.
+
+   Implementations that execute detected commands MUST validate
+   command names and arguments before execution.  The opaque payload
+   principle (Section 8.2, item 3) means the parser provides no
+   sanitization of argument content.
+
+   Extremely long lines, deeply nested backslash joins, or very
+   large fenced payloads could be used to exhaust resources.
+   Implementations SHOULD impose reasonable limits on line length,
+   join depth, and payload size.
+
+
+10.  IANA Considerations
+
+   This document has no IANA actions.
+
+
+Appendix A.  Formal Syntax
+
+   The following ABNF [RFC5234] defines the syntax elements of this
+   specification.  This grammar defines the lexical structure; the
+   partitioning rules in Section 6 define how the parser assigns
+   lines to commands and text blocks.
+
+   ; --- Character classes ---
+
+   LCALPHA        = %x61-7A
+                    ; lowercase ASCII letters a-z
+
+   HYPHEN         = %x2D
+                    ; "-"
+
+   SLASH          = %x2F
+                    ; "/"
+
+   BACKSLASH      = %x5C
+                    ; "\"
+
+   BACKTICK       = %x60
+                    ; "`"
+
+   LF             = %x0A
+                    ; line feed
+
+   CR             = %x0D
+                    ; carriage return
+
+   SP             = %x20
+                    ; space
+
+   WSP            = SP / %x09
+                    ; space or horizontal tab
+
+   NONWSP         = %x21-7E / %x80-10FFFF
+                    ; any non-whitespace character
+
+   TEXTCHAR       = %x20-10FFFF / %x09
+                    ; any printable or whitespace, excluding
+                    ; control characters other than TAB
+
+
+   ; --- Command name ---
+
+   command-name   = LCALPHA *((LCALPHA / DIGIT / HYPHEN)
+                    (LCALPHA / DIGIT))
+                    ; single letter is valid; multi-char names
+                    ; MUST NOT end with a hyphen
+
+
+   ; --- Physical and logical lines ---
+
+   physical-line  = *TEXTCHAR
+
+   join-marker    = BACKSLASH
+                    ; trailing "\" before LF boundary
+
+   ; Line joining produces logical lines from physical lines.
+   ; The joining algorithm is defined in prose in Section 3.2.
+   ; It cannot be fully expressed in ABNF because it involves
+   ; cross-line concatenation.
+
+
+   ; --- Command line ---
+
+   command-line   = *WSP SLASH command-name [1*WSP arguments]
+
+   arguments      = single-line-args / fence-args
+
+   single-line-args = 1*TEXTCHAR
+                    ; inline arguments with no fence opener
+
+   fence-args     = [header-text 1*WSP] fence-opener
+                    ; optional header text before the fence
+
+   header-text    = 1*TEXTCHAR
+                    ; text before the backtick run; trailing
+                    ; whitespace is trimmed per Section 5.2.1
+
+   fence-opener   = 3*BACKTICK [1*WSP lang-id]
+
+   lang-id        = 1*NONWSP
+                    ; single token, no internal whitespace
+
+   fence-closer   = *WSP 3*BACKTICK *WSP
+                    ; solely backticks after trimming;
+                    ; count >= opener count (prose rule)
+
+
+   ; --- Text ---
+
+   text-line      = *TEXTCHAR
+                    ; any logical line that is not a command-line
+                    ; and is not a fence body line
+
+
+Appendix B.  Parsing Examples
+
+   The following examples illustrate the expected partitioning for
+   various inputs.  Results are shown in informal notation.
+   Conforming implementations are not required to produce this
+   notation; it is used here for clarity.
+
+B.1.  Single-Line Command
+
+   Input:
+
+      /echo hello world
+
+   Result:
+
+      cmd-0: name="echo", mode=single-line,
+             header="hello world", payload="hello world",
+             range=[0,0]
+
+B.2.  Joined Multi-Line Command
+
+   Input (three physical lines):
+
+      /deploy production \
+        --region us-west-2 \
+        --canary
+
+   After joining:
+
+      /deploy production   --region us-west-2   --canary
+
+   Result:
+
+      cmd-0: name="deploy", mode=single-line,
+             header="production   --region us-west-2   --canary",
+             payload=(same as header),
+             range=[0,2]
+
+B.3.  Fenced Command with Header
+
+   Input:
+
+      /mcp call_tool write_file ```json
+      { "path": "/src/index.ts" }
+      ```
+
+   Result:
+
+      cmd-0: name="mcp", mode=fence,
+             header="call_tool write_file",
+             fence_lang="json",
+             payload='{ "path": "/src/index.ts" }',
+             range=[0,2]
+
+B.4.  Backslash Join into Fence
+
+   Input (four physical lines):
+
+      /mcp call_tool write_file \
+      ```json
+      { "path": "foo" }
+      ```
+
+   After joining, physical lines 0-1 become:
+
+      /mcp call_tool write_file ```json
+
+   Result:
+
+      cmd-0: name="mcp", mode=fence,
+             header="call_tool write_file",
+             fence_lang="json",
+             payload='{ "path": "foo" }',
+             range=[0,3]
+
+B.5.  Text Blocks and Multiple Commands
+
+   Input:
+
+      Welcome to the deployment system.
+      (blank line)
+      /deploy staging
+      /notify team --channel ops
+      Deployment complete.
+
+   Result:
+
+      text-0: content="Welcome to the deployment system.\n",
+              range=[0,1]
+      cmd-0:  name="deploy", payload="staging",
+              range=[2,2]
+      cmd-1:  name="notify", payload="team --channel ops",
+              range=[3,3]
+      text-1: content="Deployment complete.",
+              range=[4,4]
+
+B.6.  Invalid Slash Lines
+
+   Input:
+
+      /123 not a command
+      / bare slash
+      /Hello capitalized
+      /deploy staging
+
+   Result:
+
+      text-0: content=(first three lines), range=[0,2]
+      cmd-0:  name="deploy", payload="staging", range=[3,3]
+
+B.7.  Unclosed Fence
+
+   Input:
+
+      /mcp call_tool ```json
+      { "incomplete": true }
+
+   Result:
+
+      cmd-0: name="mcp", mode=fence,
+             header="call_tool", fence_lang="json",
+             payload='{ "incomplete": true }',
+             range=[0,1]
+      warning: type="unclosed_fence", start_line=0
+
+B.8.  Fence Closer with Trailing Backslash
+
+   A line containing backticks followed by a trailing backslash is
+   NOT a valid closer (after trimming, the line is not solely
+   backticks).
+
+   Input (six physical lines):
+
+      /mcp call_tool write_file -c \     [line 0]
+      ```json                             [line 1]
+      { "path": "foo" }                   [line 2]
+      ``` \                               [line 3]
+      \                                   [line 4]
+      production                          [line 5]
+
+   Line 3 after trimming contains "``` \", which is not solely
+   backticks.  The fence never closes.
+
+   Result:
+
+      cmd-0: name="mcp", mode=fence,
+             header="call_tool write_file -c",
+             fence_lang="json",
+             payload=(lines 2-5 verbatim),
+             range=[0,5]
+      warning: type="unclosed_fence", start_line=1
+
+B.9.  Proper Fence Close with Subsequent Content
+
+   Input (six physical lines):
+
+      /mcp call_tool write_file -c\      [line 0]
+      ```json                             [line 1]
+      { "path": "foo" }                   [line 2]
+      ```                                 [line 3]
+      \                                   [line 4]
+      production                          [line 5]
+
+   Lines 0-1 join.  Line 3 is a valid closer.  Lines 4-5 join
+   outside the fence.
+
+   Result:
+
+      cmd-0:  name="mcp", mode=fence,
+              header="call_tool write_file -c",
+              fence_lang="json",
+              payload='{ "path": "foo" }',
+              range=[0,3]
+      text-0: content="production", range=[4,5]
+
+
+
+Appendix C.  Reference State Machine
+
+   This appendix is non-normative.  It provides a reference state
+   machine that produces conforming output.  Conforming
+   implementations are not required to use this architecture.
+
+   States: idle, in_fence
+
+   +---------------+----------------------------+------------------+-----------+
+   | Current       | Condition                  | Action           | Next      |
+   +---------------+----------------------------+------------------+-----------+
+   | idle          | Logical line is a command   | Finalize as      | idle      |
+   |               | with no fence opener        | single-line cmd  |           |
+   +---------------+----------------------------+------------------+-----------+
+   | idle          | Logical line is a command   | Begin fence;     | in_fence  |
+   |               | with a fence opener         | record metadata  |           |
+   +---------------+----------------------------+------------------+-----------+
+   | idle          | Logical line is not a       | Append to        | idle      |
+   |               | command                     | current text blk |           |
+   +---------------+----------------------------+------------------+-----------+
+   | in_fence      | Physical line is a closing  | Finalize fenced  | idle      |
+   |               | fence                       | command          |           |
+   +---------------+----------------------------+------------------+-----------+
+   | in_fence      | Physical line is not a      | Append to        | in_fence  |
+   |               | closing fence               | payload          |           |
+   +---------------+----------------------------+------------------+-----------+
+   | in_fence      | EOF without closing fence   | Finalize cmd     | idle      |
+   |               |                             | with warning     |           |
+   +---------------+----------------------------+------------------+-----------+
+
+
+
+
+
+Normative References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/info/rfc2119>.
+
+   [RFC5234]  Crocker, D., Ed. and P. Overell, "Augmented BNF for
+              Syntax Specifications: ABNF", STD 68, RFC 5234,
+              DOI 10.17487/RFC5234, January 2008,
+              <https://www.rfc-editor.org/info/rfc5234>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in
+              RFC 2119 Key Words", BCP 14, RFC 8174,
+              DOI 10.17487/RFC8174, May 2017,
+              <https://www.rfc-editor.org/info/rfc8174>.
+
+
+Author's Address
+
+   Tom D. Davidson
+
+   Email: tom@tomdavidson.org
+   URI:   tomdavidson.org

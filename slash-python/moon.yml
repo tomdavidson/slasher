@@ -1,8 +1,10 @@
 $schema: "https://moonrepo.dev/schemas/project.json"
 language: "python"
-
 tags: ["sdk"]
 
-workspace:
-  inheritedTasks:
-    include: []
+tasks:
+  publish:
+    command: "python"
+    args: ["-m", "twine", "upload", "dist/*"]
+    options:
+      runInCI: false

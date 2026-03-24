@@ -1,12 +1,3 @@
 {
-  "parser": "0.1.0",
-  "wasm-javascript": "0.1.0",
-  "wasm-wasi": "0.1.0",
-  "spec": "0.1.0",
-  "riff-cli": "0.1.0",
-  "slash-rust": "0.1.0",
-  "slash-javascript": "0.1.0",
-  "slash-web": "0.1.0",
-  "slash-python": "0.1.0",
-  "slash-go": "0.1.0"
+  "parser": "0.1.0"
 }

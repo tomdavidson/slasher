@@ -1,6 +1,4 @@
-<img src="https://r2cdn.perplexity.ai/pplx-full-logo-primary-dark%402x.png" style="height:64px;margin-right:32px"/>
-
-## `riff` CLI Specification
+## `riff` CLI Specification - WIP
 
 ### 1. Overview
 
@@ -230,16 +228,3 @@ riff -p -c '{"user":"tom","run_id":"abc-123"}' ./prompt.md
 # Context from multiple sources merged together
 riff -c ./defaults.json -c ./overrides.env -c debug=true ./prompt.md
 ```
-
-parser/ core Rust library, internal to repo, not published wasm-js/ wasm wasm-bindgen module for
-JS/TS runtimes wasm-wasi/ wasm WASI module for polyglot SDK consumption slash-js-web/ sdk Browser
-runtime SDK (depends on wasm-js) slash-js-bundle/ sdk ESM server-side SDK (depends on wasm-js)
-slash-py/ sdk Python SDK (depends on wasm-wasi) slash-ruby/ sdk Ruby SDK (depends on wasm-wasi)
-slash-php/ sdk PHP SDK (depends on wasm-wasi) slash-elixir/ sdk Elixir SDK (depends on wasm-wasi)
-slash-ocaml/ sdk OCaml SDK (depends on wasm-wasi) slash-haskell/ sdk Haskell SDK (depends on
-wasm-wasi) slash-dart/ sdk Dart SDK (depends on wasm-wasi) slash-java/ sdk Java SDK (depends on
-wasm-wasi) slash-go/ sdk Go SDK (depends on wasm-wasi) slash-zig/ sdk Zig SDK (native FFI or
-wasm-wasi) slash-rs/ sdk Rust SDK, thin published crate wrapping parser riff/ cli CLI binary
-(depends on slash-rs) riff-deb/ pkg Debian package riff-rpm/ pkg RPM package riff-oci/ pkg OCI
-container image riff-proto/ pkg Proto toolchain plugin website/ docs Static site for documentation
-and promotion docs/ docs ADRs and formal spec (bundled into website)

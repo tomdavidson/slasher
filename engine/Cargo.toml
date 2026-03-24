@@ -1,0 +1,20 @@
+[package]
+name = "slasher_engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Slash command parser — core library"
+
+[dependencies]
+thiserror = { workspace = true }
+
+[dev-dependencies]
+proptest = "1.4"
+proptest-derive = "0.8"
+
+[features]
+# run only the fast tests in watch by using the feature and lableing slow tests with ignore in tdd mode
+# `#[cfg_attr(feature = "tdd", ignore)]`
+# `cargo nextest run --features tdd`
+tdd = []

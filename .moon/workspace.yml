@@ -1,23 +1,23 @@
 $schema: "https://moonrepo.dev/schemas/workspace.json"
 
 projects:
+  - "engine"
   # - "wit"
-  - "parser"
   # - "wasm-*"
   # - "slash-*"
   # - "riff-cli"
   # - "website"
   # - "docs"
 
-# constraints:
-#   enforceLayerRelationships: true
-#   tagRelationships:
-#     core: []
-#     wasm: ["core"]
-#     sdk: ["wasm", "core"]
-#     cli: ["sdk", "core"]
-#     pkg: ["cli"]
-#     docs: ["docs"]
+constraints:
+  enforceLayerRelationships: true
+  tagRelationships:
+    core: []
+    wasm: ["core"]
+    sdk: ["wasm", "core"]
+    cli: ["sdk", "core"]
+    pkg: ["cli"]
+    docs: ["docs"]
 
 generator:
   templates:
