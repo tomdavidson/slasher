@@ -1,5 +1,5 @@
 [package]
-name = "slasher_engine"
+name = "solidus-engine"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -14,7 +14,12 @@ proptest = "1.4"
 proptest-derive = "0.8"
 
 [features]
+
+default = []
+
 # run only the fast tests in watch by using the feature and lableing slow tests with ignore in tdd mode
 # `#[cfg_attr(feature = "tdd", ignore)]`
 # `cargo nextest run --features tdd`
 tdd = []
+
+

@@ -1,0 +1,7 @@
+# fuzz/.gitignore
+target/
+coverage/
+
+# Keep minimized crashes, ignore raw ones
+artifacts/**/crash-*
+!artifacts/**/*-minimized

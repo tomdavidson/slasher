@@ -1,8 +1,61 @@
 $schema: "https://moonrepo.dev/schemas/project.json"
-id: "parser"
+id: "engine"
 language: "rust"
 tags: ["core"]
 
 workspace:
   inheritedTasks:
     include: []
+
+
+
+tasks:
+  libfuzz:
+    script: |
+      cd "$(git rev-parse --show-toplevel)/engine/fuzz" || exit 1
+      bash ./fuzz-run.sh parse_document 300
+      bash ./fuzz-run.sh parse_document_structured 300
+    options:
+      cache: false
+
+  libafl:
+    script: |
+      cd "$(git rev-parse --show-toplevel)/engine/fuzz" || exit 1
+      bash ./fuzz-run.sh parse_document 300
+      bash ./fuzz-run.sh parse_document_structured 300
+    env:
+      FUZZ_FEATURES: "--no-default-features --features libafl"
+    options:
+      cache: false
+
+  fuzz-ci:
+    command: noop
+    deps:
+      - libfuzz
+      - libafl
+
+
+  fuzz-local:
+    script: |
+      cd "$(git rev-parse --show-toplevel)/engine/fuzz" || exit 1
+
+      bash fuzz-run.sh parse_document 3600 180
+      PD_LF=$?
+
+      bash fuzz-run.sh parse_document_structured 3600 180
+      PDS_LF=$?
+
+      FUZZ_FEATURES="--no-default-features --features libafl" \
+        bash fuzz-run.sh parse_document 3600 180
+      PD_LA=$?
+
+      FUZZ_FEATURES="--no-default-features --features libafl" \
+        bash fuzz-run.sh parse_document_structured 3600 180
+      PDS_LA=$?
+
+      FAIL=$((PD_LF | PDS_LF | PD_LA | PDS_LA))
+
+      [[ "$PD_LF" -ne 0 || "$PD_LA" -ne 0 ]] && bash fuzz-triage.sh parse_document
+      [[ "$PDS_LF" -ne 0 || "$PDS_LA" -ne 0 ]] && bash fuzz-triage.sh parse_document_structured
+
+      exit $FAIL

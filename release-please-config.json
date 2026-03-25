@@ -15,7 +15,7 @@
   "packages": {
     "parser": {
       "release-type": "rust",
-      "component": "parser"
+      "component": "engine"
     }
   }
 }

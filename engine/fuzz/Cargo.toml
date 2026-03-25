@@ -1,0 +1,34 @@
+[package]
+name = "solidus-engine-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[features]
+default = ["libfuzzer"]
+libfuzzer = ["dep:libfuzzer-sys"]
+libafl = ["dep:libafl_libfuzzer"]
+
+[dependencies]
+libfuzzer-sys = { version = "0.4", optional = true }
+libafl_libfuzzer = { version = "0.15", optional = true }
+arbitrary = { version = "1", features = ["derive"] }
+
+[dependencies.solidus-engine]
+path = ".."
+
+[[bin]]
+name = "parse_document"
+path = "fuzz_targets/parse_document.rs"
+doc = false
+
+[[bin]]
+name = "parse_document_structured"
+path = "fuzz_targets/parse_document_structured.rs"
+doc = false
+
+[workspace]
+members = ["."]

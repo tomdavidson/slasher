@@ -15,7 +15,7 @@
 //!   - cmd_seq / text_seq counter management
 //!   - ParseResult envelope (version, empty input)
 
-use slasher_engine::{ArgumentMode, LineRange, SPEC_VERSION, parse_document};
+use solidus_engine::{ArgumentMode, LineRange, SPEC_VERSION, parse_document};
 
 // =========================================================================
 // Envelope: ParseResult shape regardless of content
