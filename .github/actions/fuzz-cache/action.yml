@@ -1,35 +1,200 @@
 # .github/actions/fuzz-cache/action.yml
 name: Fuzz Corpus Cache
-description: Restore/save per-project fuzz corpus with main/PR isolation
+description: >
+  Restore/save per-project fuzz corpus with CI caching and a shared
+  orphan branch. Self-initializing: creates the corpus branch on first push.
+  PR mode is cache-only (no branch interaction).
 
 inputs:
-  project-id:
+  mode:
     required: true
-    description: "Moon project ID (e.g. engine-fuzz)"
+    description: "'pull' to restore cache + seed from branch, 'push' to sync corpus to branch"
   corpus-path:
     required: true
-    description: "Path to corpus directory"
+    description: "Repo-relative path to corpus directory (e.g. engine/fuzz/corpus)"
   pr-number:
     required: false
     default: ""
-    description: "PR number (blank = main mode)"
+    description: "PR number (blank = main mode). Branch operations are skipped for PRs."
+  corpus-branch:
+    required: false
+    default: "corpus"
+    description: "Name of the orphan branch used for shared corpus storage"
+
+outputs:
+  cache-hit:
+    description: "'true' if the CI cache was restored"
+    value: ${{ steps.cache-main.outputs.cache-hit || steps.cache-pr.outputs.cache-hit || 'false' }}
+  seeded:
+    description: "Number of inputs seeded from corpus branch (0 for PR mode)"
+    value: ${{ steps.seed.outputs.count || '0' }}
+  pushed:
+    description: "'true' if corpus was pushed to the branch"
+    value: ${{ steps.push.outputs.pushed || 'false' }}
 
 runs:
   using: composite
   steps:
-    - if: inputs.pr-number == ''
+    # ── Pull: restore CI cache ──────────────────────────────
+    - id: cache-main
+      if: inputs.mode == 'pull' && inputs.pr-number == ''
       uses: actions/cache@v4
       with:
         path: ${{ inputs.corpus-path }}
-        key: fuzz-corpus-main-${{ inputs.project-id }}-${{ github.run_id }}
+        key: fuzz-corpus-main-${{ inputs.corpus-path }}-${{ github.run_id }}
         restore-keys: |
-          fuzz-corpus-main-${{ inputs.project-id }}-
+          fuzz-corpus-main-${{ inputs.corpus-path }}-
 
-    - if: inputs.pr-number != ''
+    - id: cache-pr
+      if: inputs.mode == 'pull' && inputs.pr-number != ''
       uses: actions/cache@v4
       with:
         path: ${{ inputs.corpus-path }}
-        key: fuzz-corpus-pr-${{ inputs.pr-number }}-${{ inputs.project-id }}-${{ github.run_id }}
+        key: fuzz-corpus-pr-${{ inputs.pr-number }}-${{ inputs.corpus-path }}-${{ github.run_id }}
         restore-keys: |
-          fuzz-corpus-pr-${{ inputs.pr-number }}-${{ inputs.project-id }}-
-          fuzz-corpus-main-${{ inputs.project-id }}-
+          fuzz-corpus-pr-${{ inputs.pr-number }}-${{ inputs.corpus-path }}-
+          fuzz-corpus-main-${{ inputs.corpus-path }}-
+
+    # ── Pull: seed from orphan branch (main only) ──────────
+    - id: seed
+      if: inputs.mode == 'pull' && inputs.pr-number == ''
+      shell: bash
+      run: |
+        CORPUS="${{ inputs.corpus-path }}"
+        BRANCH="${{ inputs.corpus-branch }}"
+        SEED="/tmp/corpus-seed"
+
+        if ! git fetch origin "$BRANCH" --depth=1 2>/dev/null; then
+          echo "No ${BRANCH} branch found, skipping seed"
+          echo "count=0" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        git worktree add "$SEED" "origin/${BRANCH}" --detach 2>/dev/null || {
+          echo "count=0" >> "$GITHUB_OUTPUT"
+          exit 0
+        }
+
+        SRC="${SEED}/${CORPUS}"
+        if [[ -d "$SRC" ]]; then
+          mkdir -p "$CORPUS"
+          rsync -a "${SRC}/" "${CORPUS}/"
+          COUNT=$(find "$SRC" -type f | wc -l)
+          echo "Seeded ${COUNT} inputs from ${BRANCH} branch"
+          echo "count=${COUNT}" >> "$GITHUB_OUTPUT"
+        else
+          echo "No corpus at ${CORPUS} on ${BRANCH} branch"
+          echo "count=0" >> "$GITHUB_OUTPUT"
+        fi
+
+        git worktree remove "$SEED" --force
+
+    # ── Push: sync corpus to orphan branch (main only) ─────
+    - id: push
+      if: inputs.mode == 'push' && inputs.pr-number == ''
+      shell: bash
+      run: |
+        CORPUS="${{ inputs.corpus-path }}"
+        BRANCH="${{ inputs.corpus-branch }}"
+        REMOTE="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+        PUSH="/tmp/corpus-push"
+
+        if ! git clone --depth=1 --branch "$BRANCH" --single-branch "$REMOTE" "$PUSH" 2>/dev/null; then
+          echo "Branch ${BRANCH} not found, creating..."
+          mkdir -p "$PUSH"
+          cd "$PUSH"
+          git init -q
+          git remote add origin "$REMOTE"
+          git checkout --orphan "$BRANCH"
+          echo "Fuzz corpus storage. Do not merge into main." > README.md
+          git add README.md
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -q -m "init ${BRANCH} branch"
+          git push -u origin "$BRANCH"
+          cd -
+        fi
+
+        mkdir -p "${PUSH}/${CORPUS}"
+        rsync -a --delete "${CORPUS}/" "${PUSH}/${CORPUS}/"
+
+        cd "$PUSH"
+        git add -A
+        if git diff --cached --quiet; then
+          echo "Corpus unchanged"
+          echo "pushed=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        COUNT=$(git diff --cached --numstat | wc -l)
+        git commit -q -m "corpus: ${CORPUS} ${COUNT} files $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+        for attempt in 1 2 3; do
+          git push origin "$BRANCH" && break
+          sleep $((attempt * 2))
+          git pull --rebase origin "$BRANCH"
+        done
+
+        echo "Pushed ${COUNT} changed files"
+        echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+        rm -rf "$PUSH"
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+
+    #     # main-fuzz.yml saturate job
+    # steps:
+    #   # ... checkout, setup, resolve paths ...
+
+    #   - uses: ./.github/actions/fuzz-cache
+    #     with:
+    #       mode: pull
+    #       project-id: ${{ matrix.project.id }}
+    #       corpus-path: ${{ steps.paths.outputs.corpus }}
+
+    #   - name: Fuzz
+    #     id: fuzz
+    #     continue-on-error: true
+    #     uses: ./.github/actions/moon-run
+    #     with:
+    #       task: ${{ matrix.project.id }}:fuzz-saturate
+
+    #   - name: Triage
+    #     if: steps.fuzz.outcome == 'failure'
+    #     uses: ./.github/actions/moon-run
+    #     with:
+    #       task: ${{ matrix.project.id }}:fuzz-triage
+
+    #   - uses: ./.github/actions/fuzz-cache
+    #     if: always() && steps.fuzz.outcome != 'skipped'
+    #     with:
+    #       mode: push
+    #       project-id: ${{ matrix.project.id }}
+    #       corpus-path: ${{ steps.paths.outputs.corpus }}
+
+    #   # ... upload regressions, fail if crashes ...
+
+
+
+
+
+
+    #   # pr-fuzz.yml saturate job (push silently skips because pr-number is set)
+    #   - uses: ./.github/actions/fuzz-cache
+    #     with:
+    #       mode: pull
+    #       project-id: ${{ matrix.project.id }}
+    #       corpus-path: ${{ steps.paths.outputs.corpus }}
+    #       pr-number: ${{ needs.discover.outputs.pr-number }}
+
+    #   # ... fuzz, triage ...
+
+    #   - uses: ./.github/actions/fuzz-cache
+    #     if: always() && steps.fuzz.outcome != 'skipped'
+    #     with:
+    #       mode: push
+    #       project-id: ${{ matrix.project.id }}
+    #       corpus-path: ${{ steps.paths.outputs.corpus }}
+    #       pr-number: ${{ needs.discover.outputs.pr-number }}

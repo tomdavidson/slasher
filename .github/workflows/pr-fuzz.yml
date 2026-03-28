@@ -102,9 +102,11 @@ jobs:
 
       - uses: ./.github/actions/fuzz-cache
         with:
+          mode: pull
           project-id: ${{ matrix.project.id }}
           corpus-path: ${{ steps.paths.outputs.corpus }}
           pr-number: ${{ needs.discover.outputs.pr-number }}
+
 
       - name: Fuzz
         id: fuzz

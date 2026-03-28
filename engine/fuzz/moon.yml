@@ -128,6 +128,8 @@ tasks:
     options:
       cache: false
 
+
+
   # ---------------------------------------------------------
   # CI Integration Tasks (Fast PR check using existing corpus)
   #
@@ -152,3 +154,63 @@ tasks:
     options:
       cache: false
 
+
+
+  # ---------------------------------------------------------
+  # Corpus Sync Tasks (Shared corpus via orphan branch)
+  #
+  # The `corpus` orphan branch stores the shared fuzz corpus
+  # using one subdirectory per project (e.g. engine-fuzz/).
+  # A git worktree mounted at //.corpus/ provides local access
+  # without branch switching.
+  #   `git worktree add .corpus corpus`
+  #
+  # CI seeds from the branch before fuzzing and pushes updated
+  # corpus back after each run. Local sessions do the same via
+  # these tasks.
+  #
+  # Typical local session:
+  #
+  #   moon run engine-fuzz:fuzz-corpus-pull    # seed from CI
+  #   moon run engine-fuzz:fuzz-saturate       # fuzz for 24h
+  #   moon run engine-fuzz:fuzz-corpus-push    # triage, compact, push
+  #
+  # The push task triages any new crashes, compacts the corpus
+  # to remove redundant inputs, then syncs the result to the
+  # orphan branch. A pull before push ensures CI discoveries
+  # made during the session are preserved.
+  # ---------------------------------------------------------
+
+  fuzz-corpus-pull:
+    script: |
+      REPO_ROOT="$(git rev-parse --show-toplevel)"
+      WORKTREE="${REPO_ROOT}/.corpus"
+      CORPUS="${REPO_ROOT}/engine/fuzz/corpus"
+
+      cd "$WORKTREE" && git pull --ff-only origin corpus && cd -
+      mkdir -p "$CORPUS"
+      rsync -a "${WORKTREE}/engine/fuzz/corpus/" "${CORPUS}/"
+      echo "Pulled $(find "${WORKTREE}/engine/fuzz/corpus" -type f 2>/dev/null | wc -l) inputs"
+    options:
+      cache: false
+
+  fuzz-corpus-push:
+    script: |
+      REPO_ROOT="$(git rev-parse --show-toplevel)"
+      WORKTREE="${REPO_ROOT}/.corpus"
+      CORPUS="${REPO_ROOT}/engine/fuzz/corpus"
+
+      bash fuzz-manage.sh compact parse_document_structured
+      bash fuzz-manage.sh compact parse_document_unstructured
+      cd "$WORKTREE" && git pull --ff-only origin corpus && cd -
+      mkdir -p "${WORKTREE}/engine/fuzz/corpus"
+      rsync -a --delete "${CORPUS}/" "${WORKTREE}/engine/fuzz/corpus/"
+      cd "$WORKTREE"
+      git add -A
+      if ! git diff --cached --quiet; then
+        COUNT=$(git diff --cached --numstat | wc -l)
+        git commit -m "corpus: engine/fuzz/corpus ${COUNT} files $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        git push origin corpus
+      fi
+    options:
+      cache: false

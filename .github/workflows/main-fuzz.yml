@@ -69,6 +69,7 @@ jobs:
 
       - uses: ./.github/actions/fuzz-cache
         with:
+          mode: pull
           project-id: ${{ matrix.project.id }}
           corpus-path: ${{ steps.paths.outputs.corpus }}
 
@@ -78,6 +79,13 @@ jobs:
         uses: ./.github/actions/moon-run
         with:
           task: ${{ matrix.project.id }}:fuzz-ci
+
+      - uses: ./.github/actions/fuzz-cache
+        if: always() && steps.fuzz.outcome != 'skipped'
+        with:
+          mode: push
+          project-id: ${{ matrix.project.id }}
+          corpus-path: ${{ steps.paths.outputs.corpus }}
 
       - name: Triage
         if: steps.fuzz.outcome == 'failure'
