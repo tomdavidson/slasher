@@ -61,12 +61,13 @@ tasks:
       runInCI: false
 
   test:
-    command: "cargo nextest run --no-fail-fast -p $project"
+    command: "cargo nextest run --no-fail-fast -p solidus-$project"
     inputs:
       - "@group(cargo)"
       - "@group(sources)"
       - "@group(tests)"
       - "/.config/nextest.*"
+      - "fuzz/regressions/**/*"
     env: *env
 
   fmt-check:

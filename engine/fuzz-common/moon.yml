@@ -1,8 +1,7 @@
 $schema: "https://moonrepo.dev/schemas/project.json"
-id: "engine"
+id: "engine-fuzz-common"
 language: "rust"
-tags: ["core"]
-
+tags: ["fuzz", "testing"]
 workspace:
   inheritedTasks:
-    include: [test]
+    include: []

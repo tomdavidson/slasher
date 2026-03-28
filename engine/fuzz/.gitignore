@@ -1,0 +1,5 @@
+# fuzz/.gitignore
+corpus/**/*
+artifacts/
+target/
+*.log

@@ -19,14 +19,6 @@ Thumbs.db
 *.swp
 *.swo
 
-# Fuzz corpus artifacts (keep corpus seeds in VCS)
-fuzz/artifacts/
-fuzz/hfuzz_*
-fuzz/fuzz_*
-
-# no fuzz in root
-fuzz
-
 
 # Environment & Secrets
 .env

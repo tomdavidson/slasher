@@ -1,0 +1,47 @@
+# .github/actions/git-commit-push/action.yml
+name: Git Commit Push
+description: >
+  Stage, commit, and push changes to the current branch.
+  Defaults the commit author to the last non-merge committer on the branch.
+
+inputs:
+  add-paths:
+    required: true
+    description: "Git add pathspec (e.g. '**/regressions/')"
+  message:
+    required: true
+    description: "Commit message"
+
+outputs:
+  committed:
+    description: "'true' if changes were committed and pushed"
+    value: ${{ steps.commit.outputs.committed }}
+  file-count:
+    description: "Number of files committed"
+    value: ${{ steps.commit.outputs.file-count }}
+
+runs:
+  using: composite
+  steps:
+    - id: commit
+      shell: bash
+      run: |
+        git add --all "${{ inputs.add-paths }}"
+        if git diff --cached --quiet; then
+          echo "committed=false" >> "$GITHUB_OUTPUT"
+          echo "file-count=0" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        AUTHOR_NAME=$(git log --no-merges -1 --format='%an' 2>/dev/null)
+        AUTHOR_EMAIL=$(git log --no-merges -1 --format='%ae' 2>/dev/null)
+
+        git config user.name "${AUTHOR_NAME:-github-actions[bot]}"
+        git config user.email "${AUTHOR_EMAIL:-github-actions[bot]@users.noreply.github.com}"
+
+        FILECOUNT=$(git diff --cached --numstat | wc -l)
+        git commit -m "${{ inputs.message }}"
+        git push
+
+        echo "committed=true" >> "$GITHUB_OUTPUT"
+        echo "file-count=${FILECOUNT}" >> "$GITHUB_OUTPUT"

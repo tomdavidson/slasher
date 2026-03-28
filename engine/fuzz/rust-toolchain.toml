@@ -1,0 +1,8 @@
+[toolchain]
+channel = "nightly-2026-03-01"
+components = [
+  "rustfmt",
+  "clippy",
+  "rust-src", # required by cargo-fuzz / libafl_libfuzzer for build-std
+  "llvm-tools", # required for coverage instrumentation (-C instrument-coverage)
+]

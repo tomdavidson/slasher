@@ -21,6 +21,14 @@ pub struct LineJoiner {
     cursor: usize,
 }
 
+fn trailing_backslash_count(s: &str) -> usize {
+    s.as_bytes().iter().rev().take_while(|&&b| b == b'\\').count()
+}
+
+fn is_join_marker(s: &str) -> bool {
+    trailing_backslash_count(s) % 2 == 1
+}
+
 /// Consume the next logical line from `lines` starting at `*cursor`,
 /// joining any trailing-backslash continuations.
 fn consume_logical(lines: &[String], cursor: &mut usize) -> Option<LogicalLine> {
@@ -32,7 +40,7 @@ fn consume_logical(lines: &[String], cursor: &mut usize) -> Option<LogicalLine> 
     let mut text = lines[*cursor].clone();
     *cursor += 1;
 
-    while text.ends_with('\\') {
+    while is_join_marker(&text) {
         text.truncate(text.len() - 1);
 
         if *cursor >= lines.len() {
@@ -340,20 +348,19 @@ mod tests {
     // =========================================================================
 
     #[test]
-    fn consume_logical_double_backslash_preserves_content_backslash() {
-        // RFC §3.2: only the final '\' (immediately before LF) is the join
-        // marker. A preceding '\' is literal content and must be preserved.
-        // Input: "foo\\" (two backslashes) + "bar"
-        // After removing the final '\' and joining: "foo\bar"
-        let mut line = "foo\\".to_string();
-        line.push('\\'); // "foo\\" — two trailing backslashes
-        let ls = vec![line, "bar".to_string()];
-        let mut cursor = 0;
-        let ll = consume_logical(&ls, &mut cursor).unwrap();
-        assert_eq!(ll.text, "foo\\bar");
-        assert_eq!(ll.first_physical, 0);
-        assert_eq!(ll.last_physical, 1);
-    }
+fn consume_logical_double_backslash_preserves_content_backslash() {
+    // RFC §3.2: even number of trailing backslashes = escaped backslashes,
+    // no join marker. "foo\\" stands alone with content intact.
+    let mut line = "foo\\".to_string();
+    line.push('\\'); // "foo\\" — two trailing backslashes
+    let ls = vec![line, "bar".to_string()];
+    let mut cursor = 0;
+    let ll = consume_logical(&ls, &mut cursor).unwrap();
+    assert_eq!(ll.text, "foo\\\\");
+    assert_eq!(ll.first_physical, 0);
+    assert_eq!(ll.last_physical, 0);
+    assert_eq!(cursor, 1);
+}
 
     #[test]
     fn consume_logical_triple_backslash_joins_and_preserves_two() {

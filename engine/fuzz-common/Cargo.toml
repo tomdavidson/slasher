@@ -1,0 +1,9 @@
+[package]
+name = "engine-fuzz-common"
+version = "0.0.0"
+edition.workspace = true
+publish = false
+
+[dependencies]
+arbitrary = { version = "1", features = ["derive"] }
+solidus-engine = { path = ".." }

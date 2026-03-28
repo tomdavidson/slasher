@@ -1,0 +1,58 @@
+# .github/actions/git-stage-artifacts/action.yml
+name: Stage Artifacts
+description: >
+  Download patterned workflow artifacts and copy files into
+  target directories based on a provided mapping.
+
+inputs:
+  artifact-prefix:
+    required: true
+    description: "Artifact name prefix to match (e.g. fuzz-regressions). Each artifact is expected to be named <prefix>-<id>."
+  targets:
+    required: true
+    description: "JSON object mapping artifact IDs to target directory paths (e.g. {\"engine-fuzz\": \"engine/fuzz/regressions\"})"
+
+outputs:
+  file-count:
+    description: "Total number of files staged"
+    value: ${{ steps.stage.outputs.file-count }}
+  projects:
+    description: "Comma-separated list of IDs that had files staged"
+    value: ${{ steps.stage.outputs.projects }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: ${{ inputs.artifact-prefix }}-*
+        path: /tmp/staged-artifacts
+
+    - id: stage
+      shell: bash
+      run: |
+        shopt -s nullglob
+        TARGETS='${{ inputs.targets }}'
+        PREFIX="${{ inputs.artifact-prefix }}"
+        FILECOUNT=0
+        PROJECTS=""
+
+        for dir in /tmp/staged-artifacts/${PREFIX}-*/; do
+          ID=$(basename "$dir" | sed "s/^${PREFIX}-//")
+          TARGET=$(echo "$TARGETS" | jq -r --arg id "$ID" '.[$id] // empty')
+
+          if [[ -z "$TARGET" ]]; then continue; fi
+
+          COUNT=$(find "$dir" -type f | wc -l)
+          if [[ "$COUNT" -eq 0 ]]; then continue; fi
+
+          mkdir -p "$TARGET"
+          cp -n "$dir"/* "$TARGET/"
+          FILECOUNT=$((FILECOUNT + COUNT))
+          PROJECTS="${PROJECTS:+${PROJECTS}, }${ID}"
+        done
+
+        echo "file-count=${FILECOUNT}" >> "$GITHUB_OUTPUT"
+        echo "projects=${PROJECTS}" >> "$GITHUB_OUTPUT"
+
+        rm -rf /tmp/staged-artifacts

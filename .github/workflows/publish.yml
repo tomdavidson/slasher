@@ -32,44 +32,46 @@ jobs:
     steps:
       - id: parse
         run: |
-          # Default values for Workflow Dispatch (Manual Trigger)
           TASK="publish"
           TARGET=""
           ENV=""
 
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            if [ "${{ inputs.snapshot }}" == "true" ]; then
-               TASK="review"
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            if [[ "$INPUT_SNAPSHOT" == "true" ]]; then
+              TASK="review"
             fi
 
-            if [ "${{ inputs.scope }}" == "affected" ]; then
-               TARGET=":$TASK --affected"
+            if [[ "$INPUT_SCOPE" == "affected" ]]; then
+              TARGET=":${TASK} --affected"
             else
-               TARGET=":$TASK"
+              TARGET=":${TASK}"
             fi
           fi
 
-          # If triggered by an actual GitHub Release event
-          if [ "${{ github.event_name }}" == "release" ]; then
-            TAG="${{ github.event.release.tag_name }}"
-            COMP=$(echo "$TAG" | sed -E 's/-v[0-9].*//')
+          if [[ "$EVENT_NAME" == "release" ]]; then
+            COMP=$(echo "$RELEASE_TAG" | sed -E 's/-v[0-9].*//')
 
-            # Check if this is a pre-release (review app)
-            if [ "${{ github.event.release.prerelease }}" == "true" ]; then
-               TASK="review"
-               ENV="" # No manual gate needed for review
+            if [[ "$RELEASE_PRERELEASE" == "true" ]]; then
+              TASK="review"
             else
-               TASK="publish"
-               ENV="release" # Require production manual approval
+              TASK="publish"
+              ENV="release"
             fi
 
-            TARGET="$COMP:$TASK"
+            TARGET="${COMP}:${TASK}"
           fi
 
-          echo "task=$TASK" >> $GITHUB_OUTPUT
-          echo "target=$TARGET" >> $GITHUB_OUTPUT
-          echo "environment=$ENV" >> $GITHUB_OUTPUT
-
+          {
+            echo "task=${TASK}"
+            echo "target=${TARGET}"
+            echo "environment=${ENV}"
+          } >> "$GITHUB_OUTPUT"
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_SNAPSHOT: ${{ inputs.snapshot }}
+          INPUT_SCOPE: ${{ inputs.scope }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
   publish:
     name: Moon Run ${{ needs.router.outputs.target }}
     needs: router

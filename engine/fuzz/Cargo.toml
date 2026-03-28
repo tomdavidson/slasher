@@ -1,0 +1,37 @@
+[package]
+name = "engine-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[features]
+default = ["libfuzzer"]
+libfuzzer = ["dep:libfuzzer-sys"]
+libafl = ["dep:libafl_libfuzzer", "dep:libfuzzer-sys"]
+
+[dependencies]
+arbitrary = { version = "1", features = ["derive"] }
+libafl_libfuzzer = { git = "https://github.com/AFLplusplus/LibAFL", optional = true }
+libfuzzer-sys = { version = "0.4", optional = true }
+
+[dependencies.solidus-engine]
+path = ".."
+
+[dependencies.engine-fuzz-common]
+path = "../fuzz-common"
+
+[[bin]]
+name = "parse_document_unstructured"
+path = "harnesses/parse_document_unstructured.rs"
+doc = false
+
+[[bin]]
+name = "parse_document_structured"
+path = "harnesses/parse_document_structured.rs"
+doc = false
+
+[workspace]
+members = ["."]

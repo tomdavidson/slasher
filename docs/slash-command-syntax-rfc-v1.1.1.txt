@@ -7,7 +7,7 @@ Davidson                                                        [Page 1]
 Slash Command Syntax                                        March 2026
 
 
-                      Slash Command Syntax 1.1.0
+                      Slash Command Syntax 1.1.1
 
 Abstract
 
@@ -194,8 +194,11 @@ Table of Contents
 
    Lines that do not end with "\" are left unchanged.
 
-   The join marker is any "\" immediately before the line boundary,
-   regardless of what precedes it.
+   If the line ends with an odd number of consecutive \ characters, 
+   the final \ is the join marker. The remaining \ characters (an even
+   number) represent literal reverse solidus pairs. If the line ends 
+   with an even number of consecutive \ characters, no joining occurs; 
+   the \ characters are literal content.  This mirrors POSIX shell behavior.
 
    If the final physical line of the input ends with "\" and there
    is no subsequent line to join with, the trailing "\" is removed

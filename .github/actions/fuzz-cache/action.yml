@@ -1,0 +1,35 @@
+# .github/actions/fuzz-cache/action.yml
+name: Fuzz Corpus Cache
+description: Restore/save per-project fuzz corpus with main/PR isolation
+
+inputs:
+  project-id:
+    required: true
+    description: "Moon project ID (e.g. engine-fuzz)"
+  corpus-path:
+    required: true
+    description: "Path to corpus directory"
+  pr-number:
+    required: false
+    default: ""
+    description: "PR number (blank = main mode)"
+
+runs:
+  using: composite
+  steps:
+    - if: inputs.pr-number == ''
+      uses: actions/cache@v4
+      with:
+        path: ${{ inputs.corpus-path }}
+        key: fuzz-corpus-main-${{ inputs.project-id }}-${{ github.run_id }}
+        restore-keys: |
+          fuzz-corpus-main-${{ inputs.project-id }}-
+
+    - if: inputs.pr-number != ''
+      uses: actions/cache@v4
+      with:
+        path: ${{ inputs.corpus-path }}
+        key: fuzz-corpus-pr-${{ inputs.pr-number }}-${{ inputs.project-id }}-${{ github.run_id }}
+        restore-keys: |
+          fuzz-corpus-pr-${{ inputs.pr-number }}-${{ inputs.project-id }}-
+          fuzz-corpus-main-${{ inputs.project-id }}-

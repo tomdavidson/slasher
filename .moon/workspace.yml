@@ -1,7 +1,9 @@
 $schema: "https://moonrepo.dev/schemas/workspace.json"
 
 projects:
-  - "engine"
+  engine: 'engine'
+  engine-fuzz: 'engine/fuzz'
+  engine-fuzz-common: 'engine/fuzz-common'
   # - "wit"
   # - "wasm-*"
   # - "slash-*"

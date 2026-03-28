@@ -1,5 +1,5 @@
 [package]
-name = "slasher_engine"
+name = "solidus-engine"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,11 +10,27 @@ description = "Slash command parser — core library"
 thiserror = { workspace = true }
 
 [dev-dependencies]
+arbitrary = { version = "1.3", features = ["derive"] }
 proptest = "1.4"
 proptest-derive = "0.8"
+datatest-stable = "0.3"
+
+[dev-dependencies.engine-fuzz-common]
+path = "fuzz-common"
 
 [features]
+default = []
+
 # run only the fast tests in watch by using the feature and lableing slow tests with ignore in tdd mode
 # `#[cfg_attr(feature = "tdd", ignore)]`
 # `cargo nextest run --features tdd`
 tdd = []
+
+
+[[test]]
+name = "fuzz_regression_parse_document_unstructured"
+harness = false
+
+[[test]]
+name = "fuzz_regression_parse_document_structured"
+harness = false

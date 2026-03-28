@@ -81,9 +81,7 @@ fn try_parse_command(line: &str) -> Option<CommandHeader> {
         let header_text = rest[..fence_start].trim_end().to_string();
         let after_ticks = &rest[fence_start + fence_count..];
         let after_trimmed = after_ticks.trim_matches(is_wsp);
-        let fence_lang = if !after_trimmed.is_empty()
-            && !after_trimmed.contains(is_wsp)
-        {
+        let fence_lang = if !after_trimmed.is_empty() && !after_trimmed.contains(is_wsp) {
             Some(after_trimmed.to_string())
         } else {
             None
@@ -393,46 +391,44 @@ mod tests {
         assert_eq!(classify_line("/cmd-"), LineKind::Text);
     }
 
+    #[test]
+    fn fence_lang_with_nbsp_is_valid_token() {
+        // RFC Appendix A: NONWSP = %x21-7E / %x80-10FFFF — U+00A0 (NBSP)
+        // is above %x7E in codepoint but falls in %x80-10FFFF, so it is
+        // a valid non-whitespace character per the ABNF. A lang-id
+        // consisting of a single token containing NBSP must be accepted.
+        // NOTE: will FAIL until fence_lang extraction uses is_wsp instead
+        // of char::is_whitespace for the single-token check.
+        let h = try_parse_command("/cmd ``` nb\u{00A0}sp").unwrap();
+        assert_eq!(h.fence_lang, Some("nb\u{00A0}sp".to_string()));
+    }
 
     #[test]
-fn fence_lang_with_nbsp_is_valid_token() {
-    // RFC Appendix A: NONWSP = %x21-7E / %x80-10FFFF — U+00A0 (NBSP)
-    // is above %x7E in codepoint but falls in %x80-10FFFF, so it is
-    // a valid non-whitespace character per the ABNF. A lang-id
-    // consisting of a single token containing NBSP must be accepted.
-    // NOTE: will FAIL until fence_lang extraction uses is_wsp instead
-    // of char::is_whitespace for the single-token check.
-    let h = try_parse_command("/cmd ``` nb\u{00A0}sp").unwrap();
-    assert_eq!(h.fence_lang, Some("nb\u{00A0}sp".to_string()));
-}
+    fn fence_lang_with_em_space_is_valid_token() {
+        // RFC Appendix A: NONWSP includes %x80-10FFFF. U+2003 (EM SPACE)
+        // is not whitespace per spec, so it does not split a lang-id token.
+        // NOTE: will FAIL until fence_lang extraction uses is_wsp instead
+        // of char::is_whitespace for the single-token check.
+        let h = try_parse_command("/cmd ``` em\u{2003}sp").unwrap();
+        assert_eq!(h.fence_lang, Some("em\u{2003}sp".to_string()));
+    }
 
-#[test]
-fn fence_lang_with_em_space_is_valid_token() {
-    // RFC Appendix A: NONWSP includes %x80-10FFFF. U+2003 (EM SPACE)
-    // is not whitespace per spec, so it does not split a lang-id token.
-    // NOTE: will FAIL until fence_lang extraction uses is_wsp instead
-    // of char::is_whitespace for the single-token check.
-    let h = try_parse_command("/cmd ``` em\u{2003}sp").unwrap();
-    assert_eq!(h.fence_lang, Some("em\u{2003}sp".to_string()));
-}
+    #[test]
+    fn fence_lang_split_by_space_is_none() {
+        // RFC §5.2.1: lang-id must be "a single token (no internal
+        // whitespace)." SP (U+0020) is WSP per ABNF, so two words
+        // separated by SP means no valid lang-id.
+        let h = try_parse_command("/cmd ``` two words").unwrap();
+        assert_eq!(h.fence_lang, None);
+    }
 
-#[test]
-fn fence_lang_split_by_space_is_none() {
-    // RFC §5.2.1: lang-id must be "a single token (no internal
-    // whitespace)." SP (U+0020) is WSP per ABNF, so two words
-    // separated by SP means no valid lang-id.
-    let h = try_parse_command("/cmd ``` two words").unwrap();
-    assert_eq!(h.fence_lang, None);
-}
-
-#[test]
-fn fence_lang_split_by_tab_is_none() {
-    // RFC §5.2.1 + Appendix A: HTAB (U+0009) is WSP. A tab between
-    // tokens means the string is not a single token.
-    let h = try_parse_command("/cmd ``` two\twords").unwrap();
-    assert_eq!(h.fence_lang, None);
-}
-
+    #[test]
+    fn fence_lang_split_by_tab_is_none() {
+        // RFC §5.2.1 + Appendix A: HTAB (U+0009) is WSP. A tab between
+        // tokens means the string is not a single token.
+        let h = try_parse_command("/cmd ``` two\twords").unwrap();
+        assert_eq!(h.fence_lang, None);
+    }
 
     // =========================================================================
     // Property tests
