@@ -1,0 +1,77 @@
+# .github/actions/pr-create/action.yml
+name: PR Create
+description: Commit changes and open or update a PR idempotently
+
+inputs:
+  add-paths:
+    required: true
+    description: "Git add pathspec"
+  branch:
+    required: true
+    description: "Branch name (stable, no timestamp)"
+  title:
+    required: true
+    description: "PR title (also used as commit message)"
+  body:
+    required: true
+    description: "PR body markdown"
+  github-token:
+    required: true
+    description: "GITHUB_TOKEN"
+
+outputs:
+  has-changes:
+    description: "'true' if changes were committed"
+    value: ${{ steps.commit.outputs.has-changes }}
+  file-count:
+    description: "Number of files committed"
+    value: ${{ steps.commit.outputs.file-count }}
+  pr-number:
+    description: "PR number (new or existing)"
+    value: ${{ steps.pr.outputs.number }}
+
+runs:
+  using: composite
+  steps:
+    - id: commit
+      shell: bash
+      run: |
+        git add --all '${{ inputs.add-paths }}'
+        if git diff --cached --quiet; then
+          echo "has-changes=false" >> "$GITHUB_OUTPUT"
+          echo "file-count=0" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        FILECOUNT=$(git diff --cached --numstat | wc -l)
+        echo "has-changes=true" >> "$GITHUB_OUTPUT"
+        echo "file-count=${FILECOUNT}" >> "$GITHUB_OUTPUT"
+
+    - id: pr
+      if: steps.commit.outputs.has-changes == 'true'
+      shell: bash
+      run: |
+        BRANCH="${{ inputs.branch }}"
+        EXISTING=$(gh pr list --head "$BRANCH" --json number -q '.[0].number' 2>/dev/null || echo "")
+
+        if [[ -n "$EXISTING" ]]; then
+          echo "Updating existing PR #${EXISTING}"
+          git checkout "$BRANCH" 2>/dev/null || git checkout -b "$BRANCH"
+          git commit -m "${{ inputs.title }}"
+          git push --force-with-lease origin "$BRANCH"
+          gh pr edit "$EXISTING" --title "${{ inputs.title }}" --body "${{ inputs.body }}"
+          echo "number=${EXISTING}" >> "$GITHUB_OUTPUT"
+        else
+          git checkout -b "$BRANCH"
+          git commit -m "${{ inputs.title }}"
+          git push origin "$BRANCH"
+          PR_NUMBER=$(gh pr create \
+            --title "${{ inputs.title }}" \
+            --body "${{ inputs.body }}" \
+            --head "$BRANCH" \
+            | grep -oP '#\K[0-9]+' || gh pr list --head "$BRANCH" --json number -q '.[0].number')
+          echo "number=${PR_NUMBER}" >> "$GITHUB_OUTPUT"
+        fi
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}

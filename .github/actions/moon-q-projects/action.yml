@@ -1,0 +1,68 @@
+# .github/actions/moon-q-projects/action.yml
+name: Moon Q Projects
+description: >
+  Discover Moon projects by task name, tag, or both.
+  Returns project IDs, count, and full results with metadata
+  for use in matrix strategies and downstream steps.
+
+inputs:
+  task:
+    required: false
+    default: ""
+    description: "Filter to projects that define this task (e.g. fuzz-ci, publish, benchmark)"
+  tag:
+    required: false
+    default: ""
+    description: "Filter to projects with this tag (e.g. fuzz, rust, deployable)"
+  affected:
+    required: false
+    default: ""
+    description: "'true' to diff against default branch, 'remote' for remote tracking branch, '' for no filtering"
+
+outputs:
+  project-ids:
+    description: "Newline-separated list of matching project IDs (e.g. engine-fuzz, sdk-fuzz)"
+    value: ${{ steps.discover.outputs.project-ids }}
+  count:
+    description: "Number of matching projects (e.g. 2)"
+    value: ${{ steps.discover.outputs.count }}
+  results:
+    description: "JSON array of {id, source, metadata} objects for use in strategy.matrix"
+    value: ${{ steps.discover.outputs.results }}
+
+runs:
+  using: composite
+  steps:
+    - id: discover
+      shell: bash
+      run: |
+        TASK="${{ inputs.task }}"
+        TAG="${{ inputs.tag }}"
+        AFFECTED="${{ inputs.affected }}"
+
+        FLAGS=""
+        if [[ "$AFFECTED" == "remote" ]]; then
+          FLAGS="$FLAGS --affected remote"
+        elif [[ "$AFFECTED" == "true" ]]; then
+          FLAGS="$FLAGS --affected"
+        fi
+        [[ -n "$TASK" ]] && FLAGS="$FLAGS --tasks $TASK"
+        [[ -n "$TAG" ]] && FLAGS="$FLAGS --tags $TAG"
+
+        RESULTS=$(moon query projects --json $FLAGS \
+          | jq -c '[.projects[] | {
+              id: .id,
+              source: .source,
+              metadata: (.config?.project?.metadata // {})
+            }]')
+
+        COUNT=$(echo "$RESULTS" | jq 'length')
+        PROJECT_IDS=$(echo "$RESULTS" | jq -r '.[].id')
+
+        echo "results=${RESULTS}" >> "$GITHUB_OUTPUT"
+        echo "count=${COUNT}" >> "$GITHUB_OUTPUT"
+        echo "project-ids<<EOF" >> "$GITHUB_OUTPUT"
+        echo "$PROJECT_IDS" >> "$GITHUB_OUTPUT"
+        echo "EOF" >> "$GITHUB_OUTPUT"
+
+        echo "Discovered ${COUNT} projects: $(echo "$PROJECT_IDS" | paste -sd', ' -)"

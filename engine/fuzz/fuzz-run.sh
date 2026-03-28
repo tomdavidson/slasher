@@ -29,12 +29,13 @@ export PATH="$HOME/.cargo/bin:$PATH"
 cd "$(git rev-parse --show-toplevel)/engine/fuzz" || exit 1
 
 TARGET="${1:?Usage: fuzz-run.sh <target> [max_time] [jobs] [--replay]}"
-MAX_TIME="${2:-300}"
+MAXTIME="${FUZZ_MAXTIME:-${2:-300}}"
+
 
 CORES=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 2)
 DEFAULT_JOBS=$(( CORES / 2 ))
 [[ "$DEFAULT_JOBS" -lt 1 ]] && DEFAULT_JOBS=1
-JOBS="${3:-$DEFAULT_JOBS}"
+JOBS="${FUZZ_JOBS:-${3:-$DEFAULT_JOBS}}"
 
 REPLAY=false
 for arg in "${@:4}"; do
@@ -77,7 +78,7 @@ echo "════════════════════════�
 echo "  Fuzz: ${TARGET} (${ENGINE_NAME})"
 echo "════════════════════════════════════"
 echo "  Mode:         ${MODE}"
-echo "  Time budget:  ${MAX_TIME}s"
+echo "  Time budget:  ${MAXTIME}s"
 echo "  Jobs:         ${JOBS}"
 echo "  Corpus:       ${CORPUS_ARGS[*]}"
 echo ""
@@ -85,7 +86,7 @@ echo ""
 set +e
 if [[ "$ENGINE_NAME" == "libfuzzer" ]]; then
     FUZZER_ARGS=(
-        -max_total_time="$MAX_TIME"
+        -max_total_time="$MAXTIME"
         -print_final_stats=1
         -jobs="$JOBS"
     )
@@ -140,7 +141,7 @@ else
 fi
 echo "════════════════════════════════════"
 echo "  Mode:          ${MODE}"
-echo "  Duration:      ${MAX_TIME}s"
+echo "  Duration:      ${MAXTIME}s"
 echo "  Jobs:          ${JOBS}"
 echo "  Engine:        ${ENGINE_NAME}"
 echo "  Corpus size:   ${CORPUS_COUNT} inputs"

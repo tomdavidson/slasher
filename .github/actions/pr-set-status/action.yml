@@ -1,0 +1,71 @@
+# .github/actions/pr-status/action.yml
+name: PR Set Status
+description: Set commit status and post/update a sticky PR comment
+
+inputs:
+  sha:
+    required: true
+    description: "Git SHA"
+  pr-number:
+    required: true
+    description: "PR Number"
+  state:
+    required: true
+    description: "pending, success, or failure"
+  context:
+    required: true
+    description: "Status check name (e.g. 'fuzz / saturate')"
+  description:
+    required: true
+    description: "Description"
+  comment-marker:
+    required: true
+    description: "HTML comment marker for sticky comment (e.g. '<!-- fuzz -->')"
+  comment-body:
+    required: false
+    default: ""
+    description: "Markdown body for PR comment (empty = no comment)"
+  github-token:
+    required: true
+    description: "GITHUB_TOKEN"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/github-script@v7
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const runUrl = `${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+          await github.rest.repos.createCommitStatus({
+            ...context.repo,
+            sha: '${{ inputs.sha }}',
+            state: '${{ inputs.state }}',
+            context: '${{ inputs.context }}',
+            description: '${{ inputs.description }}',
+            target_url: runUrl,
+          });
+
+          const body = `${{ inputs.comment-body }}`;
+          if (!body) return;
+
+          const marker = '${{ inputs.comment-marker }}';
+          const pr = Number('${{ inputs.pr-number }}');
+          const { data: comments } = await github.rest.issues.listComments({
+            ...context.repo,
+            issue_number: pr,
+            per_page: 100,
+          });
+          const existing = comments.find(c => c.body.startsWith(marker));
+
+          const fullBody = marker + '\n' + body;
+          if (existing) {
+            await github.rest.issues.updateComment({
+              ...context.repo, comment_id: existing.id, body: fullBody,
+            });
+          } else {
+            await github.rest.issues.createComment({
+              ...context.repo, issue_number: pr, body: fullBody,
+            });
+          }

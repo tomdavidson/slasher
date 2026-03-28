@@ -8,114 +8,44 @@ dependsOn:
   - "engine-fuzz-common"
   - "engine"
 
+project: 
+  metadata:
+    regressions-path: "regressions"
+    corpus-path: "corpus"
+
 workspace:
   inheritedTasks:
     include: []
+
+# engine/fuzz/moon.yml
 
 tasks:
   # ---------------------------------------------------------
   # High-Level Meta Tasks
   # ---------------------------------------------------------
-
-  # The root task to run full saturation and triage sequentially
+  
   fuzz:
     command: noop
     deps:
+      - ~:libfuzz-structured
+      - ~:libfuzz-unstructured
+    options:
+      runInCI: true
+
+  fuzz-ci:
+    command: noop
+    deps:
       - ~:fuzz-saturate
-      - ~:fuzz-triage
+      - ~:fuzz-gate
     options:
       runDepsInParallel: false
 
-  # Trigger both structured and unstructured saturation in parallel
   fuzz-saturate:
     command: noop
     deps:
       - ~:fuzz-unstructured-saturate
       - ~:fuzz-structured-saturate
 
-  # ---------------------------------------------------------
-  # Saturation Tasks (Run fuzzers and compact)
-  # ---------------------------------------------------------
-
-  # Saturate structured and compact immediately after
-  fuzz-structured-saturate:
-    script: |
-      bash fuzz-manage.sh compact parse_document_structured
-    deps:
-      - ~:libfuzz-structured-saturate
-      - ~:libafl-structured-saturate
-    options:
-      runDepsInParallel: true
-
-  # Saturate unstructured and compact immediately after
-  fuzz-unstructured-saturate:
-    script: |
-      bash fuzz-manage.sh compact parse_document_unstructured
-    deps:
-      - ~:libfuzz-unstructured-saturate
-      - ~:libafl-unstructured-saturate
-    options:
-      runDepsInParallel: true
-
-  # ---------------------------------------------------------
-  # Individual Saturation Executions (86400s / 60 jobs)
-  # ---------------------------------------------------------
-
-  libfuzz-structured-saturate:
-    command: bash fuzz-run.sh parse_document_structured 86400 4
-    options:
-      cache: false
-
-  libafl-structured-saturate:
-    command: bash fuzz-run.sh parse_document_structured 86400 4
-    env:
-      FUZZ_FEATURES: "--no-default-features --features libafl"
-    options:
-      cache: false
-
-  libfuzz-unstructured-saturate:
-    command: bash fuzz-run.sh parse_document_unstructured 86400 4
-    options:
-      cache: false
-
-  libafl-unstructured-saturate:
-    command: bash fuzz-run.sh parse_document_unstructured 86400 4
-    env:
-      FUZZ_FEATURES: "--no-default-features --features libafl"
-    options:
-      cache: false
-
-  # ---------------------------------------------------------
-  # CI Integration Tasks (Fast PR check using existing corpus)
-  # ---------------------------------------------------------
-
-
-
-
-  # LibAFL does not support corpus-only replay (-runs=0). Its value is
-  # in long-running saturation, not quick CI checks. Minimized crashes
-  # are already covered by the cargo test regression suite.
-  fuzz-ci:
-    command: noop
-    deps:
-      - ~:libfuzz-structured-ci
-      - ~:libfuzz-unstructured-ci
-
-  libfuzz-structured-ci:
-    command: bash fuzz-run.sh parse_document_structured 10 10 --replay
-    options:
-      cache: false
-
-  libfuzz-unstructured-ci:
-    command: bash fuzz-run.sh parse_document_unstructured 10 10 --replay
-    options:
-      cache: false
-
-  # ---------------------------------------------------------
-  # Triage Task
-  # ---------------------------------------------------------
-
-  # Minimizes crashes into regression tests
   fuzz-triage:
     script: |
       bash fuzz-manage.sh triage parse_document_unstructured
@@ -123,26 +53,102 @@ tasks:
     options:
       cache: false
 
-  debug-env:
+  fuzz-gate:
     script: |
-      export PATH="$HOME/.cargo/bin:$PATH"
-      echo "PWD=$PWD"
-      echo "engine-fuzz"
-      echo "RUSTC=$RUSTC"
-      echo "CARGO=$CARGO"
-      echo "RUSTUP_TOOLCHAIN=$RUSTUP_TOOLCHAIN"
-      echo "PATH:" && echo "$PATH" | tr ':' '\n' | head -20
-      which rustc
-      which cargo
-      rustc --version
-      rustc --print sysroot
-      SYSROOT="$(rustc --print sysroot)"
-      echo "SYSROOT=$SYSROOT"
-      echo "--- llvm-tools bin dir ---"
-      ls "$SYSROOT/lib/rustlib/x86_64-unknown-linux-gnu/bin/" 2>/dev/null || echo "bin dir does not exist"
-      echo "--- installed components ---"
-      rustup component list --installed 2>/dev/null || echo "rustup component list failed"
-      echo "--- nightly installed components ---"
-      rustup component list --toolchain nightly --installed 2>/dev/null || echo "nightly component list failed"
+      shopt -s nullglob
+      summaries=(artifacts/*/crash-summary.txt)
+      if [ ${#summaries[@]} -eq 0 ]; then
+        echo "No new crashes across all targets."
+        exit 0
+      fi
+      for f in "${summaries[@]}"; do
+        cat "$f"
+        echo ""
+      done
+      echo "Triage with: moon run engine-fuzz:fuzz-triage"
+      exit 1
     options:
       cache: false
+
+  # ---------------------------------------------------------
+  # Saturation Tasks (Run fuzzers and compact)
+  # ---------------------------------------------------------
+
+  fuzz-structured-saturate:
+    script: bash fuzz-manage.sh compact parse_document_structured
+    deps:
+      - ~:libfuzz-structured-saturate
+      - ~:libafl-structured-saturate
+
+  fuzz-unstructured-saturate:
+    script: bash fuzz-manage.sh compact parse_document_unstructured
+    deps:
+      - ~:libfuzz-unstructured-saturate
+      - ~:libafl-unstructured-saturate
+
+  # ---------------------------------------------------------
+  # Individual Saturation Executions
+  #
+  # Defaults: FUZZ_MAXTIME=14400 (4h), FUZZ_JOBS=2
+  # CI overrides via env: FUZZ_MAXTIME=18000 FUZZ_JOBS=4
+  # Local override: FUZZ_MAXTIME=3600 FUZZ_JOBS=2 moon run ...
+  # ---------------------------------------------------------
+
+  libfuzz-structured-saturate:
+    command: bash fuzz-run.sh parse_document_structured
+    env:
+      FUZZ_MAXTIME: "14400"
+      FUZZ_JOBS: "2"
+    options:
+      cache: false
+
+  libafl-structured-saturate:
+    command: bash fuzz-run.sh parse_document_structured
+    env:
+      FUZZ_MAXTIME: "14400"
+      FUZZ_JOBS: "2"
+      FUZZ_FEATURES: "--no-default-features --features libafl"
+    options:
+      cache: false
+
+  libfuzz-unstructured-saturate:
+    command: bash fuzz-run.sh parse_document_unstructured
+    env:
+      FUZZ_MAXTIME: "14400"
+      FUZZ_JOBS: "2"
+    options:
+      cache: false
+
+  libafl-unstructured-saturate:
+    command: bash fuzz-run.sh parse_document_unstructured
+    env:
+      FUZZ_MAXTIME: "14400"
+      FUZZ_JOBS: "2"
+      FUZZ_FEATURES: "--no-default-features --features libafl"
+    options:
+      cache: false
+
+  # ---------------------------------------------------------
+  # CI Integration Tasks (Fast PR check using existing corpus)
+  #
+  # LibAFL does not support corpus-only replay (-runs=0). Its value
+  # is in long-running saturation, not quick CI checks. Minimized
+  # crashes are already covered by the cargo test regression suite.
+  # ---------------------------------------------------------
+
+  libfuzz-structured:
+    command: bash fuzz-run.sh parse_document_structured --replay
+    env:
+      FUZZ_MAXTIME: "10"
+      FUZZ_JOBS: "2"
+    options:
+      cache: false
+
+  libfuzz-unstructured:
+    command: bash fuzz-run.sh parse_document_unstructured --replay
+    env:
+      FUZZ_MAXTIME: "10"
+      FUZZ_JOBS: "2"
+    options:
+      cache: false
+

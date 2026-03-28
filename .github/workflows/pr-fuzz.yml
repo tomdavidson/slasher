@@ -1,0 +1,248 @@
+# .github/workflows/pr-fuzz.yml
+name: PR Fuzz Saturate
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        description: PR number to fuzz
+        type: string
+        required: true
+  pull_request:
+    types: [labeled]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: fuzz-pr-${{ github.event.pull_request.number || inputs.pr-number }}
+  cancel-in-progress: true
+
+jobs:
+  discover:
+    if: github.event_name != 'pull_request' || github.event.label.name == 'fuzz'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      statuses: write
+      pull-requests: write
+    outputs:
+      pr-number: ${{ steps.resolve-pr.outputs.number }}
+      ref: ${{ steps.resolve-pr.outputs.ref }}
+      sha: ${{ steps.resolve-pr.outputs.sha }}
+      results: ${{ steps.q.outputs.results }}
+      count: ${{ steps.q.outputs.count }}
+
+    steps:
+      - id: resolve-pr
+        uses: ./.github/actions/resolve-pr
+        with:
+          pr-number: ${{ inputs.pr-number }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.resolve-pr.outputs.ref }}
+          fetch-depth: 1
+
+      - uses: ./.github/actions/setup
+        with:
+          fetch-depth: 1
+          cache-pnpm: false
+
+      - uses: ./.github/actions/pr-set-status
+        with:
+          sha: ${{ steps.resolve-pr.outputs.sha }}
+          pr-number: ${{ steps.resolve-pr.outputs.number }}
+          state: pending
+          context: "fuzz / saturate"
+          description: "Fuzz saturation in progress..."
+          comment-marker: "<!-- fuzz-saturate -->"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: q
+        uses: ./.github/actions/moon-q-projects
+        with:
+          task: fuzz-ci
+
+  saturate:
+    needs: discover
+    if: fromJson(needs.discover.outputs.count) > 0
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ${{ fromJson(needs.discover.outputs.results) }}
+    env:
+      FUZZ_MAXTIME: "18000"
+      FUZZ_JOBS: "4"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.discover.outputs.ref }}
+          fetch-depth: 1
+
+      - uses: ./.github/actions/setup
+        with:
+          fetch-depth: 1
+          cache-pnpm: false
+
+      - name: Resolve paths
+        id: paths
+        run: |
+          SOURCE="${{ matrix.project.source }}"
+          CORPUS="${{ matrix.project.metadata.corpus-path }}"
+          REGRESSIONS="${{ matrix.project.metadata.regressions-path }}"
+          echo "corpus=${SOURCE}/${CORPUS:-corpus}" >> "$GITHUB_OUTPUT"
+          echo "regressions=${SOURCE}/${REGRESSIONS:-regressions}" >> "$GITHUB_OUTPUT"
+
+      - uses: ./.github/actions/fuzz-cache
+        with:
+          project-id: ${{ matrix.project.id }}
+          corpus-path: ${{ steps.paths.outputs.corpus }}
+          pr-number: ${{ needs.discover.outputs.pr-number }}
+
+      - name: Fuzz
+        id: fuzz
+        continue-on-error: true
+        uses: ./.github/actions/moon-run
+        with:
+          task: ${{ matrix.project.id }}:fuzz-ci
+
+      - name: Triage
+        if: steps.fuzz.outcome == 'failure'
+        uses: ./.github/actions/moon-run
+        with:
+          task: ${{ matrix.project.id }}:fuzz-triage
+
+      - uses: actions/upload-artifact@v4
+        if: steps.fuzz.outcome == 'failure'
+        with:
+          name: fuzz-regressions-${{ matrix.project.id }}
+          path: ${{ steps.paths.outputs.regressions }}/
+          retention-days: 30
+
+      - name: Fail if crashes
+        if: steps.fuzz.outcome == 'failure'
+        run: exit 1
+
+  report:
+    needs: [discover, saturate]
+    if: always() && needs.discover.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      statuses: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.discover.outputs.ref }}
+          fetch-depth: 1
+
+      - name: Build target map
+        if: needs.saturate.result == 'failure'
+        id: targets
+        run: |
+          TARGETS=$(echo '${{ needs.discover.outputs.results }}' \
+            | jq -c '[.[] | {
+                key: .id,
+                value: (.source + "/" + (.metadata["regressions-path"] // "regressions"))
+              }] | from_entries')
+          echo "map=${TARGETS}" >> "$GITHUB_OUTPUT"
+
+      - id: stage
+        if: needs.saturate.result == 'failure'
+        uses: ./.github/actions/git-stage-artifacts
+        with:
+          artifact-prefix: fuzz-regressions
+          targets: ${{ steps.targets.outputs.map }}
+
+      - id: commit
+        if: steps.stage.outputs.file-count != '0'
+        uses: ./.github/actions/git-commit-push
+        with:
+          add-paths: "**/regressions/"
+          message: "chore(fuzz): add ${{ steps.stage.outputs.file-count }} regression files from saturation run"
+
+      - name: Build comment
+        if: always()
+        id: comment
+        run: |
+          SATURATE="${{ needs.saturate.result }}"
+          COMMITTED="${{ steps.commit.outputs.committed }}"
+          FILECOUNT="${{ steps.commit.outputs.file-count }}"
+          PROJECTS="${{ steps.stage.outputs.projects }}"
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+          if [[ "$SATURATE" == "success" ]]; then
+            STATE="success"
+            DESC="No crashes found"
+            read -r -d '' BODY <<MD || true
+          ## 🟢 Fuzz Saturate: clean
+
+          No crashes found. [View run](${RUN_URL})
+          MD
+
+          elif [[ "$COMMITTED" == "true" ]]; then
+            STATE="failure"
+            DESC="Crashes found. ${FILECOUNT} regressions committed."
+            read -r -d '' BODY <<MD || true
+          ## 🔴 Fuzz Saturate: crashes found
+
+          **${FILECOUNT} regression files** triaged and committed to this branch.
+          Regression inputs are under \`**/regressions/\` and validated by the existing test suite.
+
+          Projects: \`${PROJECTS}\`
+
+          [View run](${RUN_URL}) · [Download crash artifacts](${RUN_URL}#artifacts)
+          MD
+
+          elif [[ "$SATURATE" == "skipped" ]]; then
+            STATE="success"
+            DESC="No affected fuzz projects"
+            read -r -d '' BODY <<MD || true
+          ## ⚪ Fuzz Saturate: skipped
+
+          No affected projects with \`fuzz-ci\` task. [View run](${RUN_URL})
+          MD
+
+          else
+            STATE="failure"
+            DESC="Fuzz run did not complete normally"
+            read -r -d '' BODY <<MD || true
+          ## 🟠 Fuzz Saturate: error
+
+          Fuzz run did not complete normally. [View run](${RUN_URL})
+          MD
+          fi
+
+          {
+            echo "state=${STATE}"
+            echo "description=${DESC}"
+            echo "body<<EOF"
+            echo "${BODY}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: ./.github/actions/pr-set-status
+        if: always()
+        with:
+          sha: ${{ needs.discover.outputs.sha }}
+          pr-number: ${{ needs.discover.outputs.pr-number }}
+          state: ${{ steps.comment.outputs.state }}
+          context: "fuzz / saturate"
+          description: ${{ steps.comment.outputs.description }}
+          comment-marker: "<!-- fuzz-saturate -->"
+          comment-body: ${{ steps.comment.outputs.body }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fail if crashes
+        if: needs.saturate.result == 'failure'
+        run: exit 1
