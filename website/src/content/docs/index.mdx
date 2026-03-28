@@ -1,40 +1,76 @@
 ---
-title: Welcome to Starlight
-description: Get started building your docs site with Starlight.
-template: splash # Remove or comment out this line to display the site sidebar on this page.
+title: Solidus
+description: The gold standard for slash command parsing.
+template: splash
 hero:
-  tagline: Congrats on setting up a new Starlight project!
-  image:
-    file: ../../assets/houston.webp
+  title: Solidus
+  tagline: The gold standard for slash command parsing.
   actions:
-    - text: Example Guide
-      link: /guides/example/
+    - text: Read the Spec
+      link: /spec/syntax/
       icon: right-arrow
-    - text: Read the Starlight docs
-      link: https://starlight.astro.build
-      icon: external
+      variant: primary
+    - text: See Examples
+      link: /examples/
       variant: minimal
 ---
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
-## Next steps
+## What is Solidus?
 
-<CardGrid stagger>
-	<Card title="Update content" icon="pencil">
-		Edit `src/content/docs/index.mdx` to see this page change.
-	</Card>
-	<Card title="Change page layout" icon="document">
-		Delete `template: splash` in `src/content/docs/index.mdx` to display a
-		sidebar on this page.
-	</Card>
-	<Card title="Add new content" icon="add-document">
-		Add Markdown or MDX files to `src/content/docs` to create new pages.
-	</Card>
-	<Card title="Configure your site" icon="setting">
-		Edit your `sidebar` and other config in `astro.config.mjs`.
-	</Card>
-	<Card title="Read the docs" icon="open-book">
-		Learn more in [the Starlight Docs](https://starlight.astro.build/).
-	</Card>
+Slash commands appear in chat applications, developer tools, and AI agent
+interfaces. Everyone implements them differently. Solidus provides the first
+formal syntax specification for `/command` parsing, along with a pure Rust
+engine that implements every rule.
+
+```
+/deploy production --region us-west-2
+/mcp call_tool write_file ```json
+{ "path": "/src/index.ts" }
+```
+/notify team --channel ops
+```
+
+The parser accepts any UTF-8 input and always returns a valid result.
+Commands, text blocks, and warnings, neatly partitioned, every time.
+
+<CardGrid>
+
+<Card title="Formally Specified" icon="document">
+  An RFC-style specification with ABNF grammar and conformance rules.
+  If it starts with `/` and follows the spec, it's a command.
+  If it doesn't, it's text. No gray area.
+</Card>
+
+<Card title="Total Function" icon="approve-check">
+  `parse_document` accepts any UTF-8 string and always returns a
+  `ParseResult`. There is no error type. Malformed input produces
+  partial results and warnings, never a failure.
+</Card>
+
+<Card title="Tested Relentlessly" icon="star">
+  Three layers of tests, property-based testing with proptest, and
+  fuzz testing with libFuzzer. The fuzz corpus only grows. Proptest
+  regressions are committed permanently.
+  [Read about it →](/soundcheck/)
+</Card>
+
+<Card title="SDKs" icon="puzzle">
+  The engine compiles to three targets: a Rust crate, a WASM module
+  with TypeScript declarations, and a WASI binary for shell pipelines.
+  Same spec. Same output. *(Coming soon.)*
+</Card>
+
 </CardGrid>
+
+## The Name
+
+The `/` character is formally named U+002F SOLIDUS. The solidus itself is
+named after a Roman gold coin introduced by Constantine I in 309 AD. It held
+its value for over 700 years and became the standard unit of account across
+the Byzantine Empire. The coin's abbreviation eventually evolved into the
+typographic stroke we now call the forward slash.
+
+A parser named Solidus, built to be stable, precise, and long-lasting.
+That's not a metaphor. That's etymology.

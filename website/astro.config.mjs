@@ -9,7 +9,14 @@ import starlightVersions from 'starlight-versions'
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://example.com/',
+  site: 'https://solidus.tomdavidson.dev/',
+  vite: {
+    resolve: {
+      alias: {
+        'nanoid/non-secure': new URL('./nanoid-non-secure-shim.mjs', import.meta.url).pathname,
+      },
+    },
+  },
   integrations: [
     mermaid({
       // Default theme: 'default', 'dark', 'forest', 'neutral', 'base'
@@ -37,18 +44,37 @@ export default defineConfig({
     starlight({
       title: 'Solidus',
       description: 'The gold standard for slash command parsing.',
+      head: [
+        { tag: 'meta', attrs: { property: 'og:title', content: 'Solidus' } },
+        { tag: 'meta', attrs: { property: 'og:description', content: 'The gold standard for slash command parsing. A formally specified, pure Rust parser for /command syntax in UTF-8 text.' } },
+        { tag: 'meta', attrs: { property: 'og:type', content: 'website' } },
+      ],
       social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/tomdavidson/solidus' }],
-      sidebar: [{
-        label: 'Guides',
-        items: [
-          // Each item here is one entry in the navigation menu.
-          { label: 'Example Guide', slug: 'guides/example' },
-        ],
-      }, { label: 'Reference', autogenerate: { directory: 'reference' } }],
+      sidebar: [
+        { label: 'Overview', slug: 'index' },
+        { label: 'Set List', slug: 'examples' },
+        {
+          label: 'The Spec',
+          items: [
+            { label: 'Syntax v1.1.0', slug: 'spec/syntax' },
+            { label: 'Engine v0.5.0', slug: 'spec/engine' },
+          ],
+        },
+        { label: 'Soundcheck', slug: 'soundcheck' },
+        {
+          label: 'SDKs',
+          badge: { text: 'Coming Soon', variant: 'caution' },
+          items: [
+            { label: 'Rust', slug: 'sdks/rust' },
+            { label: 'WASM / JavaScript', slug: 'sdks/wasm' },
+            { label: 'WASI', slug: 'sdks/wasi' },
+          ],
+        },
+      ],
       plugins: [
         starlightThemeFlexoki(),
         starlightLlmsTxt(),
-        starlightChangelogs(),
+        // starlightChangelogs(),
         // starlightVersions()
       ],
     }),
