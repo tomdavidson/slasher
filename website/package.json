@@ -1,0 +1,25 @@
+{
+  "name": "",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.38.2",
+    "@mermaid-js/layout-elk": "^0.2.1",
+    "astro": "^6.0.1",
+    "astro-contributors": "^0.8.0",
+    "astro-mermaid": "^2.0.1",
+    "mermaid": "^11.13.0",
+    "sharp": "^0.34.2",
+    "starlight-changelogs": "^0.5.0",
+    "starlight-llms-txt": "^0.8.0",
+    "starlight-theme-flexoki": "^0.2.2",
+    "starlight-versions": "^0.8.1"
+  }
+}
