@@ -10,22 +10,30 @@ fileGroups:
     - "tests/**/*"
 
 tasks:
+
+
   cargo:
     command: "cargo"
+    env: &env
+      CARGO_TERM_COLOR: "always"
     options:
       runInCI: false
+
+  debug-env:
+    script: printenv | grep -E '^(CARGO|MOON|PROTOC|PROTO|PATH)'
+    env: *env
 
   build: &build
     command: "cargo build"
     inputs:
       - "@group(cargo)"
       - "@group(sources)"
-    env: &env
-      CARGO_TERM_COLOR: "always"
+    env: *env
 
   build-release:
     <<: *build
     command: "cargo build --release"
+    env: *env
     options:
       runInCI: false
 
@@ -51,7 +59,7 @@ tasks:
       - "@group(cargo)"
       - "@group(sources)"
       - "@group(tests)"
-      - "/clippy.toml"
+      - "/.clippy.toml"
     env: *env
 
   lint-fix:
@@ -61,7 +69,7 @@ tasks:
       runInCI: false
 
   test:
-    command: "cargo nextest run --no-fail-fast -p solidus-$project"
+    command: "cargo nextest run --no-fail-fast -p $project"
     inputs:
       - "@group(cargo)"
       - "@group(sources)"
@@ -83,3 +91,5 @@ tasks:
     inputs:
       - "@group(cargo)"
     env: *env
+
+
